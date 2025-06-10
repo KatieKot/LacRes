@@ -1,0 +1,26 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr)
+dir.create(outdatadir, recursive = TRUE)
+sRNR <- readRDS("./output/code/FinalTable/all_sRNA.RDS") 
+mcols(sRNR)$short_name <- NULL 
+mcols(sRNR)$sarasas <- NULL 
+```
+
+```{r}
+olandai <- fread("input/Olandu_SupTable1.txt") %>% 
+  setnames(., c("Name", "start", "strand", "type")) %>% 
+  .[, end := start] %>% 
+  .[, chr := "NC_009004.1"] %>% 
+  makeGRangesFromDataFrame(., keep.extra.column=TRUE)
+#export(resize(olandai, 100, fix="start"), paste0(outdatadir, "S10_olanduKoordinates.bed"))
+
+fo <- findOverlaps(sRNR, olandai)
+cbind(sRNR[queryHits(fo)] %>% as.data.table() %>% .[, ID], 
+              olandai[subjectHits(fo)] %>% as.data.table() %>% .[, Name]) %>% 
+    as.data.table() %>% 
+    setnames(., c("ID", "Olandu_ID")) %>% 
+   .[, lapply(.SD, paste0, collapse = ";"), by = .(ID)] %>% 
+    setnames(., c("ID", "Olandu_ID")) %>% 
+    saveRDS(., paste0(outdatadir, "S10_olandai.RDS"))
+```

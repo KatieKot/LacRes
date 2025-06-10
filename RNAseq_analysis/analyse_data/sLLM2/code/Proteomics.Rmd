@@ -1,0 +1,111 @@
+```{r}
+library(pacman) 
+p_load(data.table, dplyr, ggplot2, stringr, foreach, scales, ggpubr, RColorBrewer, 
+  ComplexHeatmap, DT, clusterProfiler, xlsx, GenomicRanges)
+options(scipen=999)
+#source("./code/functions.R")
+knitr::opts_chunk$set(fig.width=9, fig.height=5)
+dir.create(outdatadir, recursive=TRUE)
+
+pval <- 0.05
+FC <- 1.5
+
+gff <- rtracklayer::import("/mnt/store/annotations/NC_009004/NC_009004_with_sRNA_240717.gff")
+#sarasas <- fread("../Orig_analysis/input/qPCR_ID.txt", header=FALSE)
+#vardai <- fread("../Orig_analysis/input/qPCR_ID_long.txt", header=FALSE)
+
+#tikslines <- merge(sarasas, vardai, by="V1", all=TRUE) %>% 
+#  setnames(., c("LocusTag", "Gene", "Set", "oldLocus", "fullGene")) %>% 
+#  .[is.na(oldLocus), fullGene := Gene] %>% 
+#  .[is.na(oldLocus), oldLocus := Gene] %>%
+#  .[grepl("sLLM2", Set)]
+
+mcols(gff) <- mcols(gff)[, c("ID", "Name", "gene", "gene_biotype", "locus_tag", "old_locus_tag", "Ontology_term", "product")]
+geneTable <- gff[!is.na(mcols(gff)$gene_biotype) | grepl("sRNA", mcols(gff)$locus_tag) ] %>% 
+  as.data.table() %>% 
+  .[, .(ID, Name, gene, gene_biotype, locus_tag, old_locus_tag)]
+geneTable <- merge(geneTable, gff[is.na(mcols(gff)$gene_biotype)] %>% 
+    .[, c("locus_tag", "product")] %>% 
+    as.data.table() %>% 
+    .[, c("locus_tag", "product")] %>% unique) %>% 
+  .[!(gene_biotype %in% c("rRNA", "tRNA")), ]
+geneTable <- geneTable[grepl("sRNA", locus_tag), gene_biotype := "sRNA"] %>% 
+  .[grepl("sRNA", locus_tag), old_locus_tag := locus_tag ]  
+
+ribo <-  gff[mcols(gff)$gene_biotype %in% c("rRNA", "tRNA"), ]
+
+
+OD1 <- read.xlsx("input/Supplementary dataset 3_Table S12-13_sLLM2 protome.xlsx", sheetName="A", startRow=5, header=TRUE) %>% as.data.table()
+OD2.7 <- read.xlsx("input/Supplementary dataset 3_Table S12-13_sLLM2 protome.xlsx", sheetName="B", startRow=5, header=TRUE) %>% as.data.table()
+```
+
+# Proteomika {.tabset}
+
+## OD 1 
+
+```{r}
+DE_OD1 <- OD1[abs(logFC) >= log2(FC) & adj.P.Val < pval , .(Gene)]
+nrow(DE_OD1)
+
+kk1 <- enrichKEGG(gene     = DE_OD1$Gene,
+              organism     = 'llm',
+              pvalueCutoff = 0.15,
+              pAdjustMethod = "BH"
+              )
+dotplot(kk1) + ggtitle("Over representation")
+
+
+d <- OD1 %>% 
+  .[, .(Gene, logFC)] %>% .[!is.na(logFC), ] 
+x <- d$logFC
+names(x) <- d$Gene
+
+kk2 <- gseKEGG(geneList     = sort(x, decreasing=TRUE),
+              organism     = 'llm',
+              minGSSize    = 10,
+              pvalueCutoff = 0.15,
+              pAdjustMethod = "BH",
+              verbose      = FALSE)
+
+dotplot(kk2) + ggtitle("GSEA")
+
+
+```
+
+## OD 2.7 
+
+```{r}
+DE_OD2.7 <- OD2.7[abs(logFC) >= log2(FC) & adj.P.Val < pval , .(Gene)]
+nrow(DE_OD2.7)
+
+kk1 <- enrichKEGG(gene     = DE_OD2.7$Gene,
+              organism     = 'llm',
+              pvalueCutoff = 0.15,
+              pAdjustMethod = "BH"
+              )
+
+dotplot(kk1) + ggtitle("Over representation")
+
+d <- OD2.7 %>% 
+  .[, .(Gene, logFC)] %>% .[!is.na(logFC), ] 
+x <- d$logFC
+names(x) <- d$Gene
+
+
+kk2 <- gseKEGG(geneList     = sort(x, decreasing=TRUE),
+              organism     = 'llm',
+              minGSSize    = 10,
+              pvalueCutoff = 0.5,
+              pAdjustMethod = "BH",
+              verbose      = FALSE)
+              
+```
+
+## Bendras grafikas
+
+```{r}
+listas <- list(OD1=DE_OD1$Gene, OD27=DE_OD2.7$Gene)
+ck <- compareCluster(geneCluster=listas, fun=enrichKEGG, organism = "llm", pvalueCutoff = 0.15)
+dotplot(ck)
+saveRDS(ck, paste0(outdatadir, "proteomics_bendras.RDS"))
+```

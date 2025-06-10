@@ -1,0 +1,108 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job              count    min threads    max threads
+-------------  -------  -------------  -------------
+all                  1              1              1
+make_bedgraph        6              1              1
+total                7              1              1
+
+Select jobs to execute...
+
+[Mon Jul 15 13:06:35 2024]
+rule make_bedgraph:
+    input: output/Control_R3/Control_R3.bam
+    output: output/Control_R3/Control_R3_plius.bedgraph, output/Control_R3/Control_R3_minus.bedgraph
+    jobid: 33
+    reason: Missing output files: output/Control_R3/Control_R3_minus.bedgraph, output/Control_R3/Control_R3_plius.bedgraph
+    wildcards: sample=Control_R3
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:08:21 2024]
+Finished job 33.
+1 of 7 steps (14%) done
+Select jobs to execute...
+
+[Mon Jul 15 13:08:21 2024]
+rule make_bedgraph:
+    input: output/Control_R2/Control_R2.bam
+    output: output/Control_R2/Control_R2_plius.bedgraph, output/Control_R2/Control_R2_minus.bedgraph
+    jobid: 32
+    reason: Missing output files: output/Control_R2/Control_R2_plius.bedgraph, output/Control_R2/Control_R2_minus.bedgraph
+    wildcards: sample=Control_R2
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:09:27 2024]
+Finished job 32.
+2 of 7 steps (29%) done
+Select jobs to execute...
+
+[Mon Jul 15 13:09:27 2024]
+rule make_bedgraph:
+    input: output/Sample_R2/Sample_R2.bam
+    output: output/Sample_R2/Sample_R2_plius.bedgraph, output/Sample_R2/Sample_R2_minus.bedgraph
+    jobid: 35
+    reason: Missing output files: output/Sample_R2/Sample_R2_minus.bedgraph, output/Sample_R2/Sample_R2_plius.bedgraph
+    wildcards: sample=Sample_R2
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:10:20 2024]
+Finished job 35.
+3 of 7 steps (43%) done
+Select jobs to execute...
+
+[Mon Jul 15 13:10:20 2024]
+rule make_bedgraph:
+    input: output/Sample_R3/Sample_R3.bam
+    output: output/Sample_R3/Sample_R3_plius.bedgraph, output/Sample_R3/Sample_R3_minus.bedgraph
+    jobid: 36
+    reason: Missing output files: output/Sample_R3/Sample_R3_minus.bedgraph, output/Sample_R3/Sample_R3_plius.bedgraph
+    wildcards: sample=Sample_R3
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:11:12 2024]
+Finished job 36.
+4 of 7 steps (57%) done
+Select jobs to execute...
+
+[Mon Jul 15 13:11:12 2024]
+rule make_bedgraph:
+    input: output/Sample_R1/Sample_R1.bam
+    output: output/Sample_R1/Sample_R1_plius.bedgraph, output/Sample_R1/Sample_R1_minus.bedgraph
+    jobid: 34
+    reason: Missing output files: output/Sample_R1/Sample_R1_plius.bedgraph, output/Sample_R1/Sample_R1_minus.bedgraph
+    wildcards: sample=Sample_R1
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:12:03 2024]
+Finished job 34.
+5 of 7 steps (71%) done
+Select jobs to execute...
+
+[Mon Jul 15 13:12:03 2024]
+rule make_bedgraph:
+    input: output/Control_R1/Control_R1.bam
+    output: output/Control_R1/Control_R1_plius.bedgraph, output/Control_R1/Control_R1_minus.bedgraph
+    jobid: 31
+    reason: Missing output files: output/Control_R1/Control_R1_plius.bedgraph, output/Control_R1/Control_R1_minus.bedgraph
+    wildcards: sample=Control_R1
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:12:51 2024]
+Finished job 31.
+6 of 7 steps (86%) done
+Select jobs to execute...
+
+[Mon Jul 15 13:12:51 2024]
+localrule all:
+    input: output/Control_R1/NotDedup/assembled_Control_R1.gtf, output/Control_R2/NotDedup/assembled_Control_R2.gtf, output/Control_R3/NotDedup/assembled_Control_R3.gtf, output/Sample_R1/NotDedup/assembled_Sample_R1.gtf, output/Sample_R2/NotDedup/assembled_Sample_R2.gtf, output/Sample_R3/NotDedup/assembled_Sample_R3.gtf, output/Control_R1/Control_R1.bam, output/Control_R2/Control_R2.bam, output/Control_R3/Control_R3.bam, output/Sample_R1/Sample_R1.bam, output/Sample_R2/Sample_R2.bam, output/Sample_R3/Sample_R3.bam, output/Control_R1/00_Control_R1_R1_fastqc.html, output/Control_R2/00_Control_R2_R1_fastqc.html, output/Control_R3/00_Control_R3_R1_fastqc.html, output/Sample_R1/00_Sample_R1_R1_fastqc.html, output/Sample_R2/00_Sample_R2_R1_fastqc.html, output/Sample_R3/00_Sample_R3_R1_fastqc.html, output/Control_R1/01_Control_R1_val_2_fastqc.html, output/Control_R2/01_Control_R2_val_2_fastqc.html, output/Control_R3/01_Control_R3_val_2_fastqc.html, output/Sample_R1/01_Sample_R1_val_2_fastqc.html, output/Sample_R2/01_Sample_R2_val_2_fastqc.html, output/Sample_R3/01_Sample_R3_val_2_fastqc.html, output/Control_R1/Control_R1_minus.bedgraph, output/Control_R2/Control_R2_minus.bedgraph, output/Control_R3/Control_R3_minus.bedgraph, output/Sample_R1/Sample_R1_minus.bedgraph, output/Sample_R2/Sample_R2_minus.bedgraph, output/Sample_R3/Sample_R3_minus.bedgraph, output/Control_R1/Control_R1_plius.bedgraph, output/Control_R2/Control_R2_plius.bedgraph, output/Control_R3/Control_R3_plius.bedgraph, output/Sample_R1/Sample_R1_plius.bedgraph, output/Sample_R2/Sample_R2_plius.bedgraph, output/Sample_R3/Sample_R3_plius.bedgraph, output/mapped_counts.tsv
+    jobid: 0
+    reason: Input files updated by another job: output/Sample_R1/Sample_R1_plius.bedgraph, output/Control_R3/Control_R3_minus.bedgraph, output/Control_R2/Control_R2_plius.bedgraph, output/Control_R1/Control_R1_plius.bedgraph, output/Control_R1/Control_R1_minus.bedgraph, output/Control_R3/Control_R3_plius.bedgraph, output/Sample_R2/Sample_R2_plius.bedgraph, output/Sample_R3/Sample_R3_minus.bedgraph, output/Control_R2/Control_R2_minus.bedgraph, output/Sample_R2/Sample_R2_minus.bedgraph, output/Sample_R1/Sample_R1_minus.bedgraph, output/Sample_R3/Sample_R3_plius.bedgraph
+    resources: tmpdir=/tmp
+
+[Mon Jul 15 13:12:51 2024]
+Finished job 0.
+7 of 7 steps (100%) done
+Complete log: ../../../../../scratch/kotryna/Giedrius/2024_MAPS/data_prep/.snakemake/log/2024-07-15T130635.487868.snakemake.log

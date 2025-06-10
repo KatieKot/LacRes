@@ -1,0 +1,58 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, foreach, DESeq2, edgeR)
+dir.create(outdatadir, recursive = TRUE)
+options(scipen=999)
+```
+
+```{r}
+#cmd <- paste0("cat ./output/code/FinalsRNRList/*.gff3 > ", outdatadir, "/with6libs_with5points.gff3") 
+#cmd <- paste0("cat ./output/code/FinalsRNRList/all_sRNA.gff3 > ", outdatadir, "/with6libs_with5points.gff3") 
+#tmp <- system(cmd, intern=FALSE)
+```
+
+```{r}
+samplesInfo <- fread("input/sampleInfo.txt")
+samplesInfo$group <- gsub("_[12]", "", samplesInfo$Sample)
+samples2do <- samplesInfo$Sample
+## path to BAMS
+wdir <- "LactissRNA/output/"
+files2do <- foreach(i=samples2do, .combine="c") %do% {
+  paste0(wdir, i, "/dedSorted_", i, ".bam" )
+}
+
+libsizes <- foreach(i=samples2do, .combine="rbind") %do% {
+  logas <- paste0(gsub("output/", "", wdir), "logs/", i, "/hisat2_remap.log")
+  cmd <- paste0("grep 'Total pairs' ", logas) 
+  rez <- system(cmd, intern=TRUE) %>% strsplit(., " ") %>% sapply(., `[`, 3) %>% as.numeric()
+  data.table(sampas=i, readai=rez)
+}
+
+cmd <- paste0("featureCounts -a ", "./output/code/FinalsRNRList/all_sRNA.gff3" , " --countReadPairs -O -M --fraction -p -s 1 -T 6 -g ID -t gene,sRNA,pseudogene,sequence_feature,rtracklayer -o ", outdatadir, "counts_allLibs ", gsub(",", " ", toString(files2do)))
+tmp <- system(cmd, intern=FALSE)
+
+d <- fread(paste0(outdatadir, "counts_allLibs"))  %>% 
+  .[, Geneid := gsub("gene-", "", Geneid)] %>% 
+  .[]
+colnames(d) <- gsub("2016_LactissRNA/output/", "", colnames(d)) %>% gsub(".bam", "", .) %>% gsub("/.*", "", .)
+
+counts  <- as.matrix(d[, c(samples2do), with=FALSE]) %>% round()
+rownames(counts) <- d$Geneid
+
+dds <- DESeqDataSetFromMatrix(counts, colData=samplesInfo, ~group)
+dd <- estimateSizeFactors(dds)
+dds <- DESeq(dds)
+cpmai <- cpm(dds, normalize=TRUE)
+saveRDS(cpmai, paste0(outdatadir, "cpm_allLibs.RDS"))
+```
+
+```{r}
+stopifnot(all(colnames(counts) == libsizes$sampas)) 
+y <- DGEList(counts=counts, lib.size=libsizes$readai)
+y <- calcNormFactors(y)
+n_cpm <- cpm(y, log=FALSE, normalize=TRUE)
+normal_cpm <- cpm(y, log=FALSE, normalize=FALSE)
+
+saveRDS(n_cpm, paste0(outdatadir, "cpm_allLibs_edgeR_normalized.RDS"))
+saveRDS(normal_cpm, paste0(outdatadir, "cpm_allLibs_edgeR.RDS"))
+```

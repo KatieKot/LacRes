@@ -1,0 +1,701 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 24
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count    min threads    max threads
+---------------  -------  -------------  -------------
+all                    1              1              1
+dedup_data             7             10             10
+extend_reads           7              6              6
+noHils_reads_83        7             16             16
+noHils_reads_99        7             16             16
+remap                  7             10             10
+split_strands          7              6              6
+total                 43              1             16
+
+Select jobs to execute...
+
+[Fri Jan 12 13:31:14 2024]
+rule dedup_data:
+    input: output/FivePoints_1/selectedMoved.bam, output/FivePoints_1/selectedMoved.bam.bai
+    output: output/FivePoints_1/dedup_FivePoints_1.bam
+    log: logs/FivePoints_1/dedup.log
+    jobid: 57
+    reason: Missing output files: output/FivePoints_1/dedup_FivePoints_1.bam; Updated input files: output/FivePoints_1/selectedMoved.bam
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Fri Jan 12 13:31:14 2024]
+rule dedup_data:
+    input: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai
+    output: output/PnG_1/dedup_PnG_1.bam
+    log: logs/PnG_1/dedup.log
+    jobid: 21
+    reason: Missing output files: output/PnG_1/dedup_PnG_1.bam; Updated input files: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:39:29 2024]
+Finished job 21.
+1 of 43 steps (2%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:39:29 2024]
+rule remap:
+    input: output/PnG_1/dedup_PnG_1.bam, output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    output: output/PnG_1/newR1.fq.gz, output/PnG_1/newR2.fq.gz, output/PnG_1/dedSorted_PnG_1.bam
+    log: logs/PnG_1/hisat2_remap.log
+    jobid: 20
+    reason: Input files updated by another job: output/PnG_1/dedup_PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:41:14 2024]
+Finished job 57.
+2 of 43 steps (5%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:41:14 2024]
+rule remap:
+    input: output/FivePoints_1/dedup_FivePoints_1.bam, output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/newR1.fq.gz, output/FivePoints_1/newR2.fq.gz, output/FivePoints_1/dedSorted_FivePoints_1.bam
+    log: logs/FivePoints_1/hisat2_remap.log
+    jobid: 56
+    reason: Input files updated by another job: output/FivePoints_1/dedup_FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:43:20 2024]
+Finished job 20.
+3 of 43 steps (7%) done
+Removing temporary output output/PnG_1/dedup_PnG_1.bam.
+Removing temporary output output/PnG_1/03_PnG_1_R2.fastq.gz.
+Removing temporary output output/PnG_1/03_PnG_1_R1.fastq.gz.
+Removing temporary output output/PnG_1/newR1.fq.gz.
+Removing temporary output output/PnG_1/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 13:43:20 2024]
+rule split_strands:
+    input: output/PnG_1/dedSorted_PnG_1.bam
+    output: output/PnG_1/dedSorted_PnG_1_83.bam, output/PnG_1/dedSorted_PnG_1_99.bam
+    jobid: 76
+    reason: Input files updated by another job: output/PnG_1/dedSorted_PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+
+[Fri Jan 12 13:43:20 2024]
+rule extend_reads:
+    input: output/PnG_1/dedSorted_PnG_1.bam
+    output: output/PnG_1/gr_99_PnG_1.bedgraph, output/PnG_1/gr_83_PnG_1.bedgraph
+    jobid: 19
+    reason: Input files updated by another job: output/PnG_1/dedSorted_PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 13:45:41 2024]
+Finished job 76.
+4 of 43 steps (9%) done
+Select jobs to execute...
+[Fri Jan 12 13:45:48 2024]
+Finished job 56.
+5 of 43 steps (12%) done
+Removing temporary output output/FivePoints_1/dedup_FivePoints_1.bam.
+Removing temporary output output/FivePoints_1/03_FivePoints_1_R1.fastq.gz.
+Removing temporary output output/FivePoints_1/03_FivePoints_1_R2.fastq.gz.
+Removing temporary output output/FivePoints_1/newR1.fq.gz.
+Removing temporary output output/FivePoints_1/newR2.fq.gz.
+
+[Fri Jan 12 13:45:48 2024]
+rule split_strands:
+    input: output/FivePoints_1/dedSorted_FivePoints_1.bam
+    output: output/FivePoints_1/dedSorted_FivePoints_1_83.bam, output/FivePoints_1/dedSorted_FivePoints_1_99.bam
+    jobid: 84
+    reason: Input files updated by another job: output/FivePoints_1/dedSorted_FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+
+[Fri Jan 12 13:45:48 2024]
+rule extend_reads:
+    input: output/FivePoints_1/dedSorted_FivePoints_1.bam
+    output: output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/FivePoints_1/gr_83_FivePoints_1.bedgraph
+    jobid: 55
+    reason: Input files updated by another job: output/FivePoints_1/dedSorted_FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 13:48:15 2024]
+Finished job 19.
+6 of 43 steps (14%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:48:15 2024]
+rule dedup_data:
+    input: output/Lys_2/selectedMoved.bam, output/Lys_2/selectedMoved.bam.bai
+    output: output/Lys_2/dedup_Lys_2.bam
+    log: logs/Lys_2/dedup.log
+    jobid: 48
+    reason: Missing output files: output/Lys_2/dedup_Lys_2.bam; Updated input files: output/Lys_2/selectedMoved.bam.bai, output/Lys_2/selectedMoved.bam
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:48:26 2024]
+Finished job 84.
+7 of 43 steps (16%) done
+Select jobs to execute...
+[Fri Jan 12 13:51:14 2024]
+Finished job 55.
+8 of 43 steps (19%) done
+
+[Fri Jan 12 13:51:14 2024]
+rule dedup_data:
+    input: output/PnG_2/selectedMoved.bam, output/PnG_2/selectedMoved.bam.bai
+    output: output/PnG_2/dedup_PnG_2.bam
+    log: logs/PnG_2/dedup.log
+    jobid: 30
+    reason: Missing output files: output/PnG_2/dedup_PnG_2.bam; Updated input files: output/PnG_2/selectedMoved.bam.bai, output/PnG_2/selectedMoved.bam
+    wildcards: sample=PnG_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:56:42 2024]
+Finished job 48.
+9 of 43 steps (21%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:56:42 2024]
+rule remap:
+    input: output/Lys_2/dedup_Lys_2.bam, output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    output: output/Lys_2/newR1.fq.gz, output/Lys_2/newR2.fq.gz, output/Lys_2/dedSorted_Lys_2.bam
+    log: logs/Lys_2/hisat2_remap.log
+    jobid: 47
+    reason: Input files updated by another job: output/Lys_2/dedup_Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 14:00:38 2024]
+Finished job 47.
+10 of 43 steps (23%) done
+Removing temporary output output/Lys_2/dedup_Lys_2.bam.
+Removing temporary output output/Lys_2/03_Lys_2_R2.fastq.gz.
+Removing temporary output output/Lys_2/03_Lys_2_R1.fastq.gz.
+Removing temporary output output/Lys_2/newR1.fq.gz.
+Removing temporary output output/Lys_2/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 14:00:38 2024]
+rule split_strands:
+    input: output/Lys_2/dedSorted_Lys_2.bam
+    output: output/Lys_2/dedSorted_Lys_2_83.bam, output/Lys_2/dedSorted_Lys_2_99.bam
+    jobid: 82
+    reason: Input files updated by another job: output/Lys_2/dedSorted_Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+
+[Fri Jan 12 14:00:38 2024]
+rule extend_reads:
+    input: output/Lys_2/dedSorted_Lys_2.bam
+    output: output/Lys_2/gr_99_Lys_2.bedgraph, output/Lys_2/gr_83_Lys_2.bedgraph
+    jobid: 46
+    reason: Input files updated by another job: output/Lys_2/dedSorted_Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:02:04 2024]
+Finished job 30.
+11 of 43 steps (26%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:02:04 2024]
+rule remap:
+    input: output/PnG_2/dedup_PnG_2.bam, output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz
+    output: output/PnG_2/newR1.fq.gz, output/PnG_2/newR2.fq.gz, output/PnG_2/dedSorted_PnG_2.bam
+    log: logs/PnG_2/hisat2_remap.log
+    jobid: 29
+    reason: Input files updated by another job: output/PnG_2/dedup_PnG_2.bam
+    wildcards: sample=PnG_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 14:02:48 2024]
+Finished job 82.
+12 of 43 steps (28%) done
+Select jobs to execute...
+[Fri Jan 12 14:05:22 2024]
+Finished job 46.
+13 of 43 steps (30%) done
+
+[Fri Jan 12 14:05:22 2024]
+rule dedup_data:
+    input: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    output: output/Control_2/dedup_Control_2.bam
+    log: logs/Control_2/dedup.log
+    jobid: 12
+    reason: Missing output files: output/Control_2/dedup_Control_2.bam; Updated input files: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 14:05:50 2024]
+Finished job 29.
+14 of 43 steps (33%) done
+Removing temporary output output/PnG_2/dedup_PnG_2.bam.
+Removing temporary output output/PnG_2/03_PnG_2_R2.fastq.gz.
+Removing temporary output output/PnG_2/03_PnG_2_R1.fastq.gz.
+Removing temporary output output/PnG_2/newR1.fq.gz.
+Removing temporary output output/PnG_2/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 14:05:50 2024]
+rule split_strands:
+    input: output/PnG_2/dedSorted_PnG_2.bam
+    output: output/PnG_2/dedSorted_PnG_2_83.bam, output/PnG_2/dedSorted_PnG_2_99.bam
+    jobid: 78
+    reason: Input files updated by another job: output/PnG_2/dedSorted_PnG_2.bam
+    wildcards: sample=PnG_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+
+[Fri Jan 12 14:05:50 2024]
+rule extend_reads:
+    input: output/PnG_2/dedSorted_PnG_2.bam
+    output: output/PnG_2/gr_99_PnG_2.bedgraph, output/PnG_2/gr_83_PnG_2.bedgraph
+    jobid: 28
+    reason: Input files updated by another job: output/PnG_2/dedSorted_PnG_2.bam
+    wildcards: sample=PnG_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:07:50 2024]
+Finished job 78.
+15 of 43 steps (35%) done
+Select jobs to execute...
+[Fri Jan 12 14:10:18 2024]
+Finished job 28.
+16 of 43 steps (37%) done
+
+[Fri Jan 12 14:10:18 2024]
+rule dedup_data:
+    input: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    output: output/Control_1/dedup_Control_1.bam
+    log: logs/Control_1/dedup.log
+    jobid: 3
+    reason: Missing output files: output/Control_1/dedup_Control_1.bam; Updated input files: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 14:14:27 2024]
+Finished job 12.
+17 of 43 steps (40%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:14:27 2024]
+rule remap:
+    input: output/Control_2/dedup_Control_2.bam, output/Control_2/03_Control_2_R1.fastq.gz, output/Control_2/03_Control_2_R2.fastq.gz
+    output: output/Control_2/newR1.fq.gz, output/Control_2/newR2.fq.gz, output/Control_2/dedSorted_Control_2.bam
+    log: logs/Control_2/hisat2_remap.log
+    jobid: 11
+    reason: Input files updated by another job: output/Control_2/dedup_Control_2.bam
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 14:17:01 2024]
+Finished job 3.
+18 of 43 steps (42%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:17:01 2024]
+rule remap:
+    input: output/Control_1/dedup_Control_1.bam, output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    output: output/Control_1/newR1.fq.gz, output/Control_1/newR2.fq.gz, output/Control_1/dedSorted_Control_1.bam
+    log: logs/Control_1/hisat2_remap.log
+    jobid: 2
+    reason: Input files updated by another job: output/Control_1/dedup_Control_1.bam
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 14:18:01 2024]
+Finished job 11.
+19 of 43 steps (44%) done
+Removing temporary output output/Control_2/dedup_Control_2.bam.
+Removing temporary output output/Control_2/03_Control_2_R2.fastq.gz.
+Removing temporary output output/Control_2/03_Control_2_R1.fastq.gz.
+Removing temporary output output/Control_2/newR1.fq.gz.
+Removing temporary output output/Control_2/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 14:18:01 2024]
+rule split_strands:
+    input: output/Control_2/dedSorted_Control_2.bam
+    output: output/Control_2/dedSorted_Control_2_83.bam, output/Control_2/dedSorted_Control_2_99.bam
+    jobid: 74
+    reason: Input files updated by another job: output/Control_2/dedSorted_Control_2.bam
+    wildcards: sample=Control_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+
+[Fri Jan 12 14:18:01 2024]
+rule extend_reads:
+    input: output/Control_2/dedSorted_Control_2.bam
+    output: output/Control_2/gr_99_Control_2.bedgraph, output/Control_2/gr_83_Control_2.bedgraph
+    jobid: 10
+    reason: Input files updated by another job: output/Control_2/dedSorted_Control_2.bam
+    wildcards: sample=Control_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:20:02 2024]
+Finished job 74.
+20 of 43 steps (47%) done
+Select jobs to execute...
+[Fri Jan 12 14:20:12 2024]
+Finished job 2.
+21 of 43 steps (49%) done
+Removing temporary output output/Control_1/dedup_Control_1.bam.
+Removing temporary output output/Control_1/03_Control_1_R2.fastq.gz.
+Removing temporary output output/Control_1/03_Control_1_R1.fastq.gz.
+Removing temporary output output/Control_1/newR1.fq.gz.
+Removing temporary output output/Control_1/newR2.fq.gz.
+
+[Fri Jan 12 14:20:12 2024]
+rule noHils_reads_83:
+    input: output/FivePoints_1/dedSorted_FivePoints_1_83.bam
+    output: output/FivePoints_1/dedSorted_FivePoints_1_noHils_83.bam
+    jobid: 91
+    reason: Input files updated by another job: output/FivePoints_1/dedSorted_FivePoints_1_83.bam
+    wildcards: sample=FivePoints_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:22:11 2024]
+Finished job 10.
+22 of 43 steps (51%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:22:11 2024]
+rule split_strands:
+    input: output/Control_1/dedSorted_Control_1.bam
+    output: output/Control_1/dedSorted_Control_1_83.bam, output/Control_1/dedSorted_Control_1_99.bam
+    jobid: 72
+    reason: Input files updated by another job: output/Control_1/dedSorted_Control_1.bam
+    wildcards: sample=Control_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+[Fri Jan 12 14:23:51 2024]
+Finished job 72.
+23 of 43 steps (53%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:23:51 2024]
+rule extend_reads:
+    input: output/Control_1/dedSorted_Control_1.bam
+    output: output/Control_1/gr_99_Control_1.bedgraph, output/Control_1/gr_83_Control_1.bedgraph
+    jobid: 1
+    reason: Input files updated by another job: output/Control_1/dedSorted_Control_1.bam
+    wildcards: sample=Control_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:27:23 2024]
+Finished job 1.
+24 of 43 steps (56%) done
+Select jobs to execute...
+[Fri Jan 12 14:31:53 2024]
+Finished job 91.
+25 of 43 steps (58%) done
+
+[Fri Jan 12 14:31:53 2024]
+rule noHils_reads_83:
+    input: output/PnG_1/dedSorted_PnG_1_83.bam
+    output: output/PnG_1/dedSorted_PnG_1_noHils_83.bam
+    jobid: 87
+    reason: Input files updated by another job: output/PnG_1/dedSorted_PnG_1_83.bam
+    wildcards: sample=PnG_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:42:01 2024]
+Finished job 87.
+26 of 43 steps (60%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:42:01 2024]
+rule noHils_reads_83:
+    input: output/Lys_2/dedSorted_Lys_2_83.bam
+    output: output/Lys_2/dedSorted_Lys_2_noHils_83.bam
+    jobid: 90
+    reason: Input files updated by another job: output/Lys_2/dedSorted_Lys_2_83.bam
+    wildcards: sample=Lys_2
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 14:52:11 2024]
+Finished job 90.
+27 of 43 steps (63%) done
+Select jobs to execute...
+
+[Fri Jan 12 14:52:11 2024]
+rule noHils_reads_83:
+    input: output/Control_2/dedSorted_Control_2_83.bam
+    output: output/Control_2/dedSorted_Control_2_noHils_83.bam
+    jobid: 86
+    reason: Input files updated by another job: output/Control_2/dedSorted_Control_2_83.bam
+    wildcards: sample=Control_2
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:01:21 2024]
+Finished job 86.
+28 of 43 steps (65%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:01:21 2024]
+rule noHils_reads_83:
+    input: output/PnG_2/dedSorted_PnG_2_83.bam
+    output: output/PnG_2/dedSorted_PnG_2_noHils_83.bam
+    jobid: 88
+    reason: Input files updated by another job: output/PnG_2/dedSorted_PnG_2_83.bam
+    wildcards: sample=PnG_2
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:10:43 2024]
+Finished job 88.
+29 of 43 steps (67%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:10:43 2024]
+rule noHils_reads_83:
+    input: output/Control_1/dedSorted_Control_1_83.bam
+    output: output/Control_1/dedSorted_Control_1_noHils_83.bam
+    jobid: 85
+    reason: Input files updated by another job: output/Control_1/dedSorted_Control_1_83.bam
+    wildcards: sample=Control_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:19:03 2024]
+Finished job 85.
+30 of 43 steps (70%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:19:03 2024]
+rule noHils_reads_99:
+    input: output/FivePoints_1/dedSorted_FivePoints_1_99.bam
+    output: output/FivePoints_1/dedSorted_FivePoints_1_noHils_99.bam
+    jobid: 83
+    reason: Input files updated by another job: output/FivePoints_1/dedSorted_FivePoints_1_99.bam
+    wildcards: sample=FivePoints_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:22:54 2024]
+Finished job 83.
+31 of 43 steps (72%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:22:54 2024]
+rule dedup_data:
+    input: output/Lys_1/selectedMoved.bam, output/Lys_1/selectedMoved.bam.bai
+    output: output/Lys_1/dedup_Lys_1.bam
+    log: logs/Lys_1/dedup.log
+    jobid: 39
+    reason: Missing output files: output/Lys_1/dedup_Lys_1.bam; Updated input files: output/Lys_1/selectedMoved.bam
+    wildcards: sample=Lys_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 15:28:24 2024]
+Finished job 39.
+32 of 43 steps (74%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:28:24 2024]
+rule remap:
+    input: output/Lys_1/dedup_Lys_1.bam, output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    output: output/Lys_1/newR1.fq.gz, output/Lys_1/newR2.fq.gz, output/Lys_1/dedSorted_Lys_1.bam
+    log: logs/Lys_1/hisat2_remap.log
+    jobid: 38
+    reason: Input files updated by another job: output/Lys_1/dedup_Lys_1.bam
+    wildcards: sample=Lys_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 15:31:02 2024]
+Finished job 38.
+33 of 43 steps (77%) done
+Removing temporary output output/Lys_1/dedup_Lys_1.bam.
+Removing temporary output output/Lys_1/03_Lys_1_R1.fastq.gz.
+Removing temporary output output/Lys_1/03_Lys_1_R2.fastq.gz.
+Removing temporary output output/Lys_1/newR1.fq.gz.
+Removing temporary output output/Lys_1/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 15:31:02 2024]
+rule split_strands:
+    input: output/Lys_1/dedSorted_Lys_1.bam
+    output: output/Lys_1/dedSorted_Lys_1_83.bam, output/Lys_1/dedSorted_Lys_1_99.bam
+    jobid: 80
+    reason: Input files updated by another job: output/Lys_1/dedSorted_Lys_1.bam
+    wildcards: sample=Lys_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=20
+
+
+[Fri Jan 12 15:31:03 2024]
+rule extend_reads:
+    input: output/Lys_1/dedSorted_Lys_1.bam
+    output: output/Lys_1/gr_99_Lys_1.bedgraph, output/Lys_1/gr_83_Lys_1.bedgraph
+    jobid: 37
+    reason: Input files updated by another job: output/Lys_1/dedSorted_Lys_1.bam
+    wildcards: sample=Lys_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:32:35 2024]
+Finished job 80.
+34 of 43 steps (79%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:32:35 2024]
+rule noHils_reads_83:
+    input: output/Lys_1/dedSorted_Lys_1_83.bam
+    output: output/Lys_1/dedSorted_Lys_1_noHils_83.bam
+    jobid: 89
+    reason: Input files updated by another job: output/Lys_1/dedSorted_Lys_1_83.bam
+    wildcards: sample=Lys_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:34:11 2024]
+Finished job 37.
+35 of 43 steps (81%) done
+Select jobs to execute...
+[Fri Jan 12 15:40:15 2024]
+Finished job 89.
+36 of 43 steps (84%) done
+
+[Fri Jan 12 15:40:15 2024]
+rule noHils_reads_99:
+    input: output/PnG_1/dedSorted_PnG_1_99.bam
+    output: output/PnG_1/dedSorted_PnG_1_noHils_99.bam
+    jobid: 75
+    reason: Input files updated by another job: output/PnG_1/dedSorted_PnG_1_99.bam
+    wildcards: sample=PnG_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:43:43 2024]
+Finished job 75.
+37 of 43 steps (86%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:43:43 2024]
+rule noHils_reads_99:
+    input: output/Lys_2/dedSorted_Lys_2_99.bam
+    output: output/Lys_2/dedSorted_Lys_2_noHils_99.bam
+    jobid: 81
+    reason: Input files updated by another job: output/Lys_2/dedSorted_Lys_2_99.bam
+    wildcards: sample=Lys_2
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:47:13 2024]
+Finished job 81.
+38 of 43 steps (88%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:47:13 2024]
+rule noHils_reads_99:
+    input: output/PnG_2/dedSorted_PnG_2_99.bam
+    output: output/PnG_2/dedSorted_PnG_2_noHils_99.bam
+    jobid: 77
+    reason: Input files updated by another job: output/PnG_2/dedSorted_PnG_2_99.bam
+    wildcards: sample=PnG_2
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:50:39 2024]
+Finished job 77.
+39 of 43 steps (91%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:50:39 2024]
+rule noHils_reads_99:
+    input: output/Control_2/dedSorted_Control_2_99.bam
+    output: output/Control_2/dedSorted_Control_2_noHils_99.bam
+    jobid: 73
+    reason: Input files updated by another job: output/Control_2/dedSorted_Control_2_99.bam
+    wildcards: sample=Control_2
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:53:44 2024]
+Finished job 73.
+40 of 43 steps (93%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:53:44 2024]
+rule noHils_reads_99:
+    input: output/Control_1/dedSorted_Control_1_99.bam
+    output: output/Control_1/dedSorted_Control_1_noHils_99.bam
+    jobid: 71
+    reason: Input files updated by another job: output/Control_1/dedSorted_Control_1_99.bam
+    wildcards: sample=Control_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:56:23 2024]
+Finished job 71.
+41 of 43 steps (95%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:56:23 2024]
+rule noHils_reads_99:
+    input: output/Lys_1/dedSorted_Lys_1_99.bam
+    output: output/Lys_1/dedSorted_Lys_1_noHils_99.bam
+    jobid: 79
+    reason: Input files updated by another job: output/Lys_1/dedSorted_Lys_1_99.bam
+    wildcards: sample=Lys_1
+    threads: 16
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan 12 15:58:49 2024]
+Finished job 79.
+42 of 43 steps (98%) done
+Select jobs to execute...
+
+[Fri Jan 12 15:58:49 2024]
+localrule all:
+    input: output/Control_1/gr_99_Control_1.bedgraph, output/Control_2/gr_99_Control_2.bedgraph, output/PnG_1/gr_99_PnG_1.bedgraph, output/PnG_2/gr_99_PnG_2.bedgraph, output/Lys_1/gr_99_Lys_1.bedgraph, output/Lys_2/gr_99_Lys_2.bedgraph, output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/Control_1/gr_83_Control_1.bedgraph, output/Control_2/gr_83_Control_2.bedgraph, output/PnG_1/gr_83_PnG_1.bedgraph, output/PnG_2/gr_83_PnG_2.bedgraph, output/Lys_1/gr_83_Lys_1.bedgraph, output/Lys_2/gr_83_Lys_2.bedgraph, output/FivePoints_1/gr_83_FivePoints_1.bedgraph, output/Control_1/dedSorted_Control_1.bam, output/Control_2/dedSorted_Control_2.bam, output/PnG_1/dedSorted_PnG_1.bam, output/PnG_2/dedSorted_PnG_2.bam, output/Lys_1/dedSorted_Lys_1.bam, output/Lys_2/dedSorted_Lys_2.bam, output/FivePoints_1/dedSorted_FivePoints_1.bam, output/Control_1/00_Control_1_R2_fastqc.html, output/Control_2/00_Control_2_R2_fastqc.html, output/PnG_1/00_PnG_1_R2_fastqc.html, output/PnG_2/00_PnG_2_R2_fastqc.html, output/Lys_1/00_Lys_1_R2_fastqc.html, output/Lys_2/00_Lys_2_R2_fastqc.html, output/FivePoints_1/00_FivePoints_1_R2_fastqc.html, output/Control_1/03_Control_1_R2_fastqc.html, output/Control_2/03_Control_2_R2_fastqc.html, output/PnG_1/03_PnG_1_R2_fastqc.html, output/PnG_2/03_PnG_2_R2_fastqc.html, output/Lys_1/03_Lys_1_R2_fastqc.html, output/Lys_2/03_Lys_2_R2_fastqc.html, output/FivePoints_1/03_FivePoints_1_R2_fastqc.html, output/Control_1/dedSorted_Control_1_noHils_99.bam, output/Control_2/dedSorted_Control_2_noHils_99.bam, output/PnG_1/dedSorted_PnG_1_noHils_99.bam, output/PnG_2/dedSorted_PnG_2_noHils_99.bam, output/Lys_1/dedSorted_Lys_1_noHils_99.bam, output/Lys_2/dedSorted_Lys_2_noHils_99.bam, output/FivePoints_1/dedSorted_FivePoints_1_noHils_99.bam, output/Control_1/dedSorted_Control_1_noHils_83.bam, output/Control_2/dedSorted_Control_2_noHils_83.bam, output/PnG_1/dedSorted_PnG_1_noHils_83.bam, output/PnG_2/dedSorted_PnG_2_noHils_83.bam, output/Lys_1/dedSorted_Lys_1_noHils_83.bam, output/Lys_2/dedSorted_Lys_2_noHils_83.bam, output/FivePoints_1/dedSorted_FivePoints_1_noHils_83.bam
+    jobid: 0
+    reason: Input files updated by another job: output/PnG_2/dedSorted_PnG_2_noHils_99.bam, output/PnG_1/dedSorted_PnG_1_noHils_83.bam, output/Control_2/dedSorted_Control_2.bam, output/Control_1/dedSorted_Control_1_noHils_83.bam, output/PnG_2/gr_83_PnG_2.bedgraph, output/FivePoints_1/dedSorted_FivePoints_1_noHils_99.bam, output/Control_2/gr_83_Control_2.bedgraph, output/Control_1/gr_83_Control_1.bedgraph, output/FivePoints_1/dedSorted_FivePoints_1.bam, output/PnG_1/gr_83_PnG_1.bedgraph, output/Lys_1/dedSorted_Lys_1_noHils_99.bam, output/Lys_1/gr_83_Lys_1.bedgraph, output/PnG_1/gr_99_PnG_1.bedgraph, output/FivePoints_1/dedSorted_FivePoints_1_noHils_83.bam, output/Lys_2/gr_99_Lys_2.bedgraph, output/Lys_2/dedSorted_Lys_2_noHils_83.bam, output/Control_1/dedSorted_Control_1_noHils_99.bam, output/Lys_1/gr_99_Lys_1.bedgraph, output/Control_2/gr_99_Control_2.bedgraph, output/Control_1/gr_99_Control_1.bedgraph, output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/Lys_1/dedSorted_Lys_1.bam, output/Control_1/dedSorted_Control_1.bam, output/FivePoints_1/gr_83_FivePoints_1.bedgraph, output/Lys_1/dedSorted_Lys_1_noHils_83.bam, output/Lys_2/dedSorted_Lys_2_noHils_99.bam, output/PnG_1/dedSorted_PnG_1_noHils_99.bam, output/Lys_2/gr_83_Lys_2.bedgraph, output/Control_2/dedSorted_Control_2_noHils_83.bam, output/Control_2/dedSorted_Control_2_noHils_99.bam, output/PnG_1/dedSorted_PnG_1.bam, output/PnG_2/dedSorted_PnG_2_noHils_83.bam, output/PnG_2/gr_99_PnG_2.bedgraph, output/Lys_2/dedSorted_Lys_2.bam, output/PnG_2/dedSorted_PnG_2.bam
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 15:58:49 2024]
+Finished job 0.
+43 of 43 steps (100%) done
+Complete log: ../../../../../scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/.snakemake/log/2024-01-12T133114.442999.snakemake.log

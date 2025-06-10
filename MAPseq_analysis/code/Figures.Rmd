@@ -1,0 +1,52 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, RColorBrewer, viridis, GenomicRanges, gggenes)
+
+options(scipen=999)
+dir.create(outdatadir, recursive=TRUE)
+tipelis <- "n"
+lfc <- log2(2)
+pval <- 0.01
+#showtext_auto()
+p_load(data.table, dplyr, ggplot2, stringr, foreach, scales, ggpubr, RColorBrewer, circlize,
+  ComplexHeatmap, tximport, readr, DESeq2, DT, clusterProfiler, xlsx, rtracklayer, ggrepel, ggtranscript)
+```
+```{r}
+#################################################
+### Volcano
+#################################################
+p <- readRDS("./output/code/difAnalysis/DESeq2_rez_simple.RDS") %>% 
+  .[, potipis := "Non significant"] %>% 
+  .[abs(log2FoldChange) >= lfc & padj <= pval, potipis := "Sigificant (gene)" ] %>% 
+  .[abs(log2FoldChange) >= lfc & padj <= pval & grepl("sRNA", rn), potipis := "Sigificant (sRNA)" ] %>%   
+  setkey(., potipis) %>% 
+  .[, potipis := factor(potipis, levels=c("Sigificant (gene)", "Non significant", "Sigificant (sRNA)"))] %>% 
+  .[, shape := "normal"] %>% 
+  .[padj < 0.00000005, shape := "outside"] %>% 
+  .[padj < 0.00000005, padj := 0.00000005] %>% 
+  .[, ykras := (-1) * log10(padj)] %>% 
+ggplot(aes(log2FoldChange, ykras, color=potipis, shape=shape)) +
+    geom_point(size=1.5) +
+    theme_bw() +
+    ylab("-log10(padj)") +
+    xlab("log2FoldChange") + 
+    theme(legend.position="bottom") +
+    coord_cartesian(ylim=c(0, log10(0.00000005)*(-1)), xlim=c(-2, 6)) + 
+    scale_color_manual(values = c(brewer.pal(n=8,"Dark2")[1], "grey", magma(6)[5]), 
+                       guide = guide_legend(override.aes = list(size = 2))) +
+    guides(color=guide_legend(nrow=1,byrow=TRUE)) +
+    theme(
+      legend.position ="none", 
+      axis.text = element_text(size = 8, colour="black"),  
+      axis.title = element_text(size = 8, colour="black"),  
+      plot.margin = margin(t = 7, l = 0, r = 5, b = 0),
+      panel.grid.minor = element_blank()) +  
+    guides(shape = guide_legend(nrow = 2), 
+           colour = guide_legend(nrow = 3) )    
+
+
+pdf(paste0(outdatadir, "MAPS_Volcano.pdf"), width=3.5, height=2.97, family="ArialMT")
+  p
+dev.off() 
+
+``

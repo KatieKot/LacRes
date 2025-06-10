@@ -1,0 +1,189 @@
+```{r}
+library(pacman) 
+p_load(data.table, dplyr, ggplot2, stringr, foreach, scales, ggpubr, RColorBrewer, circlize,
+  ComplexHeatmap, tximport, readr, DESeq2, DT, clusterProfiler, xlsx, rtracklayer, ggrepel, ggtranscript)
+options(scipen=999)
+knitr::opts_chunk$set(fig.width=9, fig.height=5)
+dir.create(outdatadir, recursive=TRUE)
+
+pval <- 0.0005
+FC <- 1.5
+d <- readRDS(paste0("output/code/DE_analysis_edgeR/", "/significant.RDS"))
+```
+
+Differentially expressed genes were identified using DESeq2 packages (adjusted p-value threshold was `r pval`  and LFC threshold was `r FC`). In total `r nrow(d)` differentially expressed genes were identified. `r nrow(d[logFC>0, ])` genes showed increased expression and  `r nrow(d[logFC<0, ])` decreased. 
+
+
+```{r}
+d <- readRDS(paste0("output/code/DE_analysis_edgeR/", "/countaiNorn.RDS"))     
+```
+
+```{r}
+pr <- prcomp(t(d))
+p <- pr$x  %>% 
+  as.data.table(., keep.rownames=TRUE) %>% 
+  .[, .(rn, PC1, PC2)] %>% 
+  .[, sample :=  str_split(rn, "_") %>% sapply(., `[`, 1)] %>%
+  .[, replicate :=  str_split(rn, "_") %>% sapply(., `[`, 2)] %>% 
+  ggplot(aes(PC1, PC2, colour=sample, shape=replicate)) +
+    geom_point(size=3) +
+    xlab(paste0("PC1, ", round(summary(pr)$importance[2, 1]*100, 2), "%")) +
+    ylab(paste0("PC2, ", round(summary(pr)$importance[2, 2]*100, 2), "%")) +
+    theme_bw() +
+    scale_color_manual(values=c(brewer.pal(n=3,"Set1")[1], brewer.pal(n=3,"Set1")[3])) +
+     guides(color = guide_legend(ncol = 1), 
+            shape = guide_legend(ncol = 1) ) +
+    theme(legend.position ="bottom", 
+          legend.title = element_text(size = 6),  
+          axis.text = element_text(size = 6),  
+          axis.title = element_text(size = 6),  
+          legend.text = element_text(size = 4)) 
+p
+pdf(paste0(outdatadir, "PCA.pdf"), width=2.5, height=2.5)
+  p 
+dev.off()  
+```
+
+```{r}
+d <- readRDS(paste0("output/code/DE_analysis_edgeR/", "/results.RDS"))
+
+gff <- rtracklayer::import("NC_009004_with_sRNA.gff")
+sarasas <- fread("../sLLM1042/input/qPCR_ID.txt", header=FALSE)
+vardai <- fread("../sLLM1042/input/qPCR_ID_long.txt", header=FALSE)
+
+tikslines <- merge(sarasas, vardai, by="V1", all=TRUE) %>% 
+  setnames(., c("LocusTag", "Gene", "Set", "oldLocus", "fullGene")) %>% 
+  .[is.na(oldLocus), fullGene := Gene] %>% 
+  .[is.na(oldLocus), oldLocus := Gene] %>%
+  .[grepl("sLLM2", Set)]  %>% 
+  .[fullGene != "alr"]
+
+upreguliuoti <- d[logFC > log2(FC) & FDR <= pval, ] %>% nrow()
+downreguliuoti <- d[logFC < (-1)*log2(FC) & FDR <= pval, ] %>% nrow()
+
+set.seed(2000)
+dd <- d %>% 
+  as.data.table() %>%
+  .[, .(rn, logFC, FDR)] %>%
+  .[, forma := "p. adj > 0"]  %>% 
+  .[FDR == 0, forma := "p. adj == 0"]  %>% 
+  .[FDR == 0, FDR := 1e-297]  %>% 
+  .[, yval := (-1) * log10(FDR)] %>%
+  .[, type := "Non. sig."] %>%
+  .[abs(logFC) >= log2(FC), type := "Non. sig."] %>%
+  .[FDR <= pval, type := "Non. sig."] %>%
+  .[(abs(logFC) >= log2(FC)) & (FDR <= pval), type := "FC & p-adj."] %>%
+  .[, type := factor(type, levels=c("Non. sig.", "FC & p-adj."))] %>% 
+  merge(., tikslines[, .(LocusTag, fullGene)], by.x="rn", by.y="LocusTag", all.x=TRUE)  %>% 
+  .[, fullGene := gsub(".*,", "", fullGene)] 
+
+tikslines <- tikslines  %>% 
+  .[, fullGene := gsub(".*,", "", fullGene)] 
+
+nudgeY <- rep(0, nrow(dd))
+nudgeY[dd$fullGene == tikslines$fullGene[1]] <- -1   #cpdC
+nudgeY[dd$fullGene == tikslines$fullGene[2]] <- -1   # no0xE
+nudgeY[dd$fullGene == tikslines$fullGene[3]] <- 0.75   # llmg_0760
+nudgeY[dd$fullGene == tikslines$fullGene[4]] <- -0.75  # purC
+nudgeY[dd$fullGene == tikslines$fullGene[5]] <- -0.75   # ribU
+nudgeY[dd$fullGene == tikslines$fullGene[6]] <- -0.25   # xpt   
+nudgeY[dd$fullGene == tikslines$fullGene[7]] <- 0  # cluA 
+nudgeY[dd$fullGene == tikslines$fullGene[8]] <- 0  # guaC
+nudgeY[dd$fullGene == tikslines$fullGene[9]] <- -1   # ribA
+nudgeY[dd$fullGene == tikslines$fullGene[10]] <- 0   # ribD
+nudgeY[dd$fullGene == tikslines$fullGene[11]] <- -1   # pbuO
+
+nudgeX <- rep(0, nrow(dd))
+nudgeX[dd$fullGene == tikslines$fullGene[1]] <-  0.0   
+nudgeX[dd$fullGene == tikslines$fullGene[2]] <-  0  
+nudgeX[dd$fullGene == tikslines$fullGene[3]] <- -0.1   
+nudgeX[dd$fullGene == tikslines$fullGene[4]] <- 0   
+nudgeX[dd$fullGene == tikslines$fullGene[5]] <- 0   
+nudgeX[dd$fullGene == tikslines$fullGene[6]] <- 0.75  
+nudgeX[dd$fullGene == tikslines$fullGene[7]] <- -1  
+nudgeX[dd$fullGene == tikslines$fullGene[8]] <- -1 
+nudgeX[dd$fullGene == tikslines$fullGene[9]] <- 0  
+nudgeX[dd$fullGene == tikslines$fullGene[10]] <- -1   
+nudgeX[dd$fullGene == tikslines$fullGene[11]] <- 0
+
+p <- ggplot(dd, aes(logFC, yval, colour=type, label=fullGene, shape=forma)) +
+    geom_point(size=0.55) +
+    theme_bw() +
+    geom_text_repel(
+                    box.padding = -0.05,  
+                    min.segment.length = 0,
+                    colour = "black", 
+                    size = 2,
+                    direction = "both",
+                    segment.size = 0.25, 
+                    segment.length = unit(20, 'mm'),
+                    nudge_y = nudgeY,    # Move labels further down
+                    nudge_x = nudgeX
+                    ) +
+    ylab("-log10(FDR)") +
+    xlab("log2FoldChange") + 
+    scale_colour_manual(values=c(brewer.pal(n=3,"Dark2")[8], brewer.pal(n=8,"Dark2")[1])) +
+    scale_shape_manual(values=c(16, 17)) +
+    guides(color = guide_legend(ncol = 2)) +
+    coord_cartesian(xlim=c(-5.5, 5.5)) +
+    guides(color = guide_legend(nrow = 2), shape = guide_legend(nrow = 2)) +
+     annotate("text", x = -4.3, y = 0.75, 
+             label = paste0(downreguliuoti, " down", "\u002D", "\nregulated"), 
+             lineheight = 0.9,
+             color = brewer.pal(n=8,"Dark2")[1], size = 2.75) + 
+    annotate("text", x = 4.3, y = 0.75, 
+             label = paste0(upreguliuoti, " up", "\u002D", "\nregulated"), 
+             lineheight = 0.9,
+             color = brewer.pal(n=8,"Dark2")[1], size = 2.75) +              
+    theme(legend.position ="none", 
+      axis.text = element_text(size = 8, colour="black"),  
+      axis.title = element_text(size = 8, colour="black"),  
+      plot.margin = margin(t = 7, l = 0, r = 5, b = 0),
+      panel.grid.minor = element_blank()) 
+
+pdf(paste0(outdatadir, "Volcano.pdf"), width=2.5, height=3.5, family="ArialMT")
+  p 
+dev.off()  
+
+```
+
+```{r}
+d <- readRDS(paste0("output/code/DE_analysis_edgeR/", "/KEGG_GSEA.RDS"))
+d@result$Description <- gsub(" - Lactococcus lactis subsp. cremoris MG1363", "", d@result$Description)
+
+p1 <- clusterProfiler::dotplot(d, color="qvalue") +
+  theme_bw() +
+    coord_cartesian(xlim=c(0.0001, 1)) +
+    scale_size(range = c(1, 5), 
+              limits=c(5, 50),
+              breaks=c(10, 20, 30, 40, 50),
+              ) +
+    scale_color_continuous(low="red", high="blue", 
+            name = "q-value",
+            breaks = c(0.00, 0.025, 0.05),
+            guide=guide_colorbar(reverse=TRUE), limits=c(0, 0.055)) +
+    theme(legend.position ="right", 
+      axis.text = element_text(size = 8, colour="black"),  
+      axis.title = element_text(size = 8, colour="black"),  
+      legend.text = element_text(size = 7, margin = margin(l = 0, r = 0, t = 0, b = 0)), 
+      plot.margin = margin(t = 7, r = 0, b = 0, l=5),
+      legend.margin = margin(t = 0, b = 0, r = 0, l=0),
+      legend.spacing = unit(0.1, "lines"),
+      legend.title = element_text(size=8, margin = margin(b = 0)), 
+      panel.grid.minor = element_blank(),
+      plot.title = element_blank(),
+      plot.subtitle = element_blank()) 
+p1 
+
+pdf(paste0(outdatadir, "GSEA_enrichment.pdf"), width=4, height=3, family="ArialMT")
+  p1 
+dev.off()  
+```
+
+```{r}
+px <- p | p1
+
+pdf(paste0(outdatadir, "sLLM2_VolcanoGSEA.pdf"), width=7.01, height=2.97, family="ArialMT")
+  px
+dev.off() 
+```

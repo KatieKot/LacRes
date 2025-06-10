@@ -1,0 +1,558 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, APERO, Rsamtools, reshape2, snowfall, doParallel, ggplot2, bamsignals, GenomicRanges, Rsamtools, foreach, rtracklayer)
+options(scipen=999)
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+dir.create(outdatadir, recursive=TRUE)
+path2BAMS <- "LactissRNA/output/"
+```
+
+```{r}
+ptt_prot <- read.csv(paste0("NC_009004.gb", ".ptt"), sep="\t", skip=2, header=T, stringsAsFactors = F) %>% as.data.table
+ptt_RNA <- read.csv(paste0("NC_009004.gb", ".rnt"), sep="\t", skip=2, header=T, stringsAsFactors = F) %>% as.data.table
+ptt_RNA_s <- copy(ptt_RNA)
+ptt_RNA_s[, Strand := "-"]
+ptt <- rbind(ptt_prot, ptt_RNA, ptt_RNA_s)
+gff <- import("NC_009004.gff3")
+strucRNAs <- gff[mcols(gff)$gene_biotype %in% c("tRNA", "rRNA") | mcols(gff)$type %in% c("tRNA", "rRNA"), ]
+pseudoGenes <- gff[mcols(gff)$type == "pseudogene"]
+mcols(pseudoGenes) <- NULL 
+samplesInfo <- fread("./input/sampleInfo.txt")
+samples2do <- samplesInfo$Sample
+old_dir <- getwd() 
+```
+
+```{r}
+ptt_prot_gr <- ptt_prot %>% 
+  .[, start := strsplit(Location, "\\.\\.") %>% sapply(., `[`, 1) %>% as.numeric()] %>% 
+  .[, end := strsplit(Location, "\\.\\.") %>% sapply(., `[`, 2) %>% as.numeric()] %>% 
+  .[, chr := "NC_009004.1"] %>% 
+  unique() %>% 
+  makeGRangesFromDataFrame()
+
+ptt_RNA_gr <- rbind(ptt_RNA, ptt_RNA_s) %>% 
+  .[, start := strsplit(Location, "\\.\\.") %>% sapply(., `[`, 1) %>% as.numeric()] %>% 
+  .[, end := strsplit(Location, "\\.\\.") %>% sapply(., `[`, 2) %>% as.numeric()] %>% 
+  .[, chr := "NC_009004.1"] %>% 
+  unique() %>% 
+  makeGRangesFromDataFrame()
+
+ptt_prot_pseudo_rnr <- c(ptt_prot_gr, ptt_RNA_gr, pseudoGenes)
+
+sRNR_list <- foreach (i=samples2do) %do% {
+  sRNR <- rbind(readRDS((paste0("./output/code/RunAperro/",  i, "/", i, "_aperro_res2.RDS"))), 
+                readRDS((paste0("./output/code/RunAperro/",  i, "/", i, "_aperro_res2_var3.RDS"))),   
+                readRDS((paste0("./output/code/RunAperro/",  i, "/", i, "_aperro_res2_var4.RDS"))),   
+                readRDS((paste0("./output/code/RunAperro/",  i, "/", i, "_aperro_res2_var5.RDS"))),   
+                readRDS((paste0("./output/code/RunAperro/",  i, "/", i, "_aperro_res2_var2.RDS")))) %>% 
+    as.data.table() %>% 
+    .[, .(ID_Transcrit, Position, lg, str)] %>% 
+    .[, strand := str] %>% 
+    .[strand == "+", end := Position + lg] %>% 
+    .[strand == "+", start := Position] %>% 
+    .[strand == "-", end := Position] %>%
+    .[strand == "-", start := end - lg] %>%
+    .[, start := round(start)] %>% 
+    .[, end := round(end)] %>% 
+    .[, chr := "NC_009004.1"] %>% 
+    makeGRangesFromDataFrame() %>% 
+    unique() 
+  mcols(sRNR)$ID <- paste0(seqnames(sRNR), "_", start(sRNR), "_", end(sRNR))
+  return(sRNR)
+}
+names(sRNR_list) <- samples2do
+saveRDS(sRNR_list, paste0(outdatadir, "Apero_reduce.RDS"))
+export(unique(unlist(as(sRNR_list, "GRangesList"))), paste0(outdatadir, "all_apero.bed"))
+
+
+kiekiai <- sapply(sRNR_list, length) %>% 
+  as.matrix() %>%
+  as.data.table(., keep.rownames=TRUE) %>% 
+  setnames(., c("sample", "RawApero"))
+
+sRNR_list <- foreach (i=samples2do) %do% {
+  rez <- sRNR_list[[i]]
+  rez <- rez[width(rez) >= 40, ]
+  rez <- rez[width(rez) <= 1000, ]
+  return(rez)
+}
+
+saveRDS(sRNR_list, paste0(outdatadir, "Ilgiai.RDS"))
+export(unique(unlist(as(sRNR_list, "GRangesList"))), paste0(outdatadir, "tinkamo_ilgio.bed"))
+
+# Collect sRNR from all libs 
+visos_sRNR <- c(sRNR_list[[1]], sRNR_list[[2]], sRNR_list[[3]], sRNR_list[[4]], sRNR_list[[5]], sRNR_list[[6]], sRNR_list[[7]]) %>% 
+  unique
+mcols(visos_sRNR)$ID <- paste0(seqnames(visos_sRNR), "_", start(visos_sRNR), "_", end(visos_sRNR))
+tmp <- foreach(i=samples2do) %do% {
+    sRNR_list[[i]] <- visos_sRNR
+    return(1)
+}
+saveRDS(sRNR_list, paste0(outdatadir, "SurinktaIsVisu.RDS"))
+```
+
+```{r}
+# Filter out those that do not have obvious ends 
+
+fix_start <- function(coveragai, vidurys, th=3) {
+  for (i in vidurys:3) {
+    if (coveragai[i] < 5) {
+      rezu <- NA; 
+      break
+      } 
+    if ((coveragai[i]/coveragai[i-1] >= th)) {
+      rezu <- i
+      break
+    } else if (coveragai[i]/coveragai[i-2] >= th) {
+       rezu <- i-1
+       break
+    } else {rezu <- NA}
+  } 
+    if (i < 4) {rezu <- NA}
+  return(rezu) 
+}
+
+fix_end <- function(coveragai, vidurys, th=3) {
+  for (i in vidurys:((length(coveragai)-2))) {
+      if (coveragai[i] < 5) {
+        rezu <- NA; 
+        break
+        }
+      if (coveragai[i]/coveragai[i+1] >= th) {
+        rezu <- i
+        break
+      } else if ((coveragai[i]/coveragai[i+2] >= th)) {
+         rezu <- i + 1
+         break
+      } else {rezu <- NA}
+    }
+      if (i < 4) {rezu <- NA}
+    return(rezu) 
+}
+
+filter_coord <- function(RNR, meginys, pratempimas=100, dSam=samplesInfo, th=3) {
+    #RNR <-  sRNR_list[[5]]
+    #meginys <- samplesInfo[Sample==i, Sample]
+    #dSam=samplesInfo[Sample==i, ]
+    
+    bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_99.bam")
+    ext_sRNR <- RNR[strand(RNR) =="+",] + pratempimas
+    bprof <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE)
+    dlist <- as.list(bprof)
+    ilgiai <- lapply(dlist, length)
+
+    positivai <- foreach (j=1:length(ext_sRNR), .combine='rbind') %do% {
+      seka <- dlist[[j]]
+      if (max(seka) >= 20) {
+        pradzia_vidurio <- start(ext_sRNR)[j] +  fix_start(seka, ilgiai[[j]]%/%2, th) - 1
+        pabaiga_vidurio <- start(ext_sRNR)[j] + fix_end(seka, ilgiai[[j]]%/%2, th) -1
+
+        sk <- ((length(seka)-pratempimas*2)%/%4)
+        pos2start <- which.max(seka[70:(70+sk)]) + 70
+        pradzia_pradzios <- start(ext_sRNR)[j] + fix_start(seka, pos2start, th)-1
+        pabaiga_pradzios <- start(ext_sRNR)[j] + fix_end(seka, pos2start, th)-1
+
+        pos2start <- which.max(seka[(length(seka) - pratempimas - sk):(length(seka) - pratempimas + 30)])+(length(seka) - pratempimas - sk)
+        pradzia_pabaigos <- start(ext_sRNR)[j] + fix_start(seka, (pos2start), th)-1
+        pabaiga_pabaigos <- start(ext_sRNR)[j] + fix_end(seka, (pos2start), th)-1
+
+        #Analogiskai prifiksavus pradzia/pabaiga ir ieskant aplink juos piko tik 20 bp atstumu  
+      
+        pos2start <- which.max(seka[(pratempimas-20):120]) + (pratempimas-20)
+        pradzia_pradzios2 <- start(ext_sRNR)[j] + fix_start(seka, pos2start, th)-1
+        pabaiga_pradzios2 <- start(ext_sRNR)[j] + fix_end(seka, pos2start, th)-1
+
+        pos2start <- which.max(seka[(length(seka) - pratempimas - 20):((length(seka) - pratempimas + 20))]) + (length(seka) - pratempimas - 20)
+        pradzia_pabaigos2 <- start(ext_sRNR)[j] + fix_start(seka, (pos2start), th)-1
+        pabaiga_pabaigos2 <- start(ext_sRNR)[j] + fix_end(seka, (pos2start), th)-1
+
+        vidurinis_ok <- !is.na(pradzia_vidurio) & !(is.na(pabaiga_vidurio))
+        pradinis_ok <- !is.na(pradzia_pradzios) & !(is.na(pabaiga_pradzios))
+        galinis_ok <- !is.na(pradzia_pabaigos) & !(is.na(pabaiga_pabaigos))
+        pradinis2_ok <- !is.na(pradzia_pradzios2) & !(is.na(pabaiga_pradzios2))
+        galinis2_ok <- !is.na(pradzia_pabaigos2) & !(is.na(pabaiga_pabaigos2))
+        
+        if(!vidurinis_ok & !pradinis_ok  & !pradinis2_ok & !galinis_ok & !galinis2_ok ) {blogas_ok <- TRUE} else {blogas_ok <- FALSE}
+  
+        vidurinis_rez <- data.table(start=pradzia_vidurio, end=pabaiga_vidurio, ID=as.character(mcols(ext_sRNR)[j,]), tipas="vidurinis" )
+        pradinis_rez <- data.table(start=pradzia_pradzios, end=pabaiga_pradzios, ID=as.character(mcols(ext_sRNR)[j,]), tipas="pradinis" )
+        galinis_rez <- data.table(start=pradzia_pabaigos, end=pabaiga_pabaigos, ID=as.character(mcols(ext_sRNR)[j,]), tipas="galinis" )  
+        pradinis_rez2 <- data.table(start=pradzia_pradzios2, end=pabaiga_pradzios2, ID=as.character(mcols(ext_sRNR)[j,]), tipas="pradinis" )
+        galinis_rez2 <- data.table(start=pradzia_pabaigos2, end=pabaiga_pabaigos2, ID=as.character(mcols(ext_sRNR)[j,]), tipas="galinis" )  
+        blogas_rez <- data.table(start=NA, end=NA, ID=as.character(mcols(ext_sRNR)[j,]), tipas="joks" )
+        visi <- rbind(vidurinis_rez, pradinis_rez, pradinis_rez2, galinis_rez, galinis_rez2, blogas_rez)
+        rezu <- visi[c(vidurinis_ok, pradinis_ok, pradinis2_ok, galinis_ok, galinis2_ok, blogas_ok), ] 
+        } else {rezu <- data.table(start=NA, end=NA, ID=as.character(mcols(ext_sRNR)[j,]), tipas="joks" )}
+        return(rezu )
+                                                                        }
+
+  # doing negative strand   
+    bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_83.bam")
+    ext_sRNR <- RNR[strand(RNR) =="-",] + pratempimas
+    ext_sRNR_minus <- RNR[strand(RNR) =="-",]
+    bprof <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE)
+    dlist <- as.list(bprof)
+    ilgiai <- lapply(dlist, length)
+
+    negativai <- foreach (j=1:length(ext_sRNR), .combine='rbind') %do% {
+      seka <- rev(dlist[[j]])
+      #seka <- dlist[[j]]
+      if (max(seka) >= 20) {
+        pradzia_vidurio <- start(ext_sRNR)[j] +  fix_start(seka, ilgiai[[j]]%/%2, th) - 1
+        pabaiga_vidurio <- start(ext_sRNR)[j] + fix_end(seka, ilgiai[[j]]%/%2, th) -1
+
+        sk <- ((length(seka)-pratempimas*2)%/%4)
+        pos2start <- which.max(seka[70:(70+sk)]) + 70
+        pradzia_pradzios <- start(ext_sRNR)[j] + fix_start(seka, pos2start, th)-1
+        pabaiga_pradzios <- start(ext_sRNR)[j] + fix_end(seka, pos2start, th)-1
+
+        pos2start <- which.max(seka[(length(seka) - pratempimas - sk):(length(seka) - pratempimas + 30)])+(length(seka) - pratempimas - sk)
+        pradzia_pabaigos <- start(ext_sRNR)[j] + fix_start(seka, (pos2start), th)-1
+        pabaiga_pabaigos <- start(ext_sRNR)[j] + fix_end(seka, (pos2start), th)-1
+
+        #Analogiskai prifiksavus pradzia/pabaiga ir ieskant aplink juos piko tik 20 bp atstumu  
+      
+        pos2start <- which.max(seka[(pratempimas-20):120]) + (pratempimas-20)
+        pradzia_pradzios2 <- start(ext_sRNR)[j] + fix_start(seka, pos2start, th)-1
+        pabaiga_pradzios2 <- start(ext_sRNR)[j] + fix_end(seka, pos2start, th)-1
+
+        pos2start <- which.max(seka[(length(seka) - pratempimas - 20):((length(seka) - pratempimas + 20))]) + (length(seka) - pratempimas - 20)
+        pradzia_pabaigos2 <- start(ext_sRNR)[j] + fix_start(seka, (pos2start), th)-1
+        pabaiga_pabaigos2 <- start(ext_sRNR)[j] + fix_end(seka, (pos2start), th)-1
+
+        vidurinis_ok <- !is.na(pradzia_vidurio) & !(is.na(pabaiga_vidurio))
+        pradinis_ok <- !is.na(pradzia_pradzios) & !(is.na(pabaiga_pradzios))
+        galinis_ok <- !is.na(pradzia_pabaigos) & !(is.na(pabaiga_pabaigos))
+        pradinis2_ok <- !is.na(pradzia_pradzios2) & !(is.na(pabaiga_pradzios2))
+        galinis2_ok <- !is.na(pradzia_pabaigos2) & !(is.na(pabaiga_pabaigos2))
+        
+        if(!vidurinis_ok & !pradinis_ok  & !pradinis2_ok & !galinis_ok & !galinis2_ok ) {blogas_ok <- TRUE} else {blogas_ok <- FALSE}
+  
+        vidurinis_rez <- data.table(start=pradzia_vidurio, end=pabaiga_vidurio, ID=as.character(mcols(ext_sRNR)[j,]), tipas="vidurinis" )
+        pradinis_rez <- data.table(start=pradzia_pradzios, end=pabaiga_pradzios, ID=as.character(mcols(ext_sRNR)[j,]), tipas="pradinis" )
+        galinis_rez <- data.table(start=pradzia_pabaigos, end=pabaiga_pabaigos, ID=as.character(mcols(ext_sRNR)[j,]), tipas="galinis" )  
+        pradinis_rez2 <- data.table(start=pradzia_pradzios2, end=pabaiga_pradzios2, ID=as.character(mcols(ext_sRNR)[j,]), tipas="pradinis" )
+        galinis_rez2 <- data.table(start=pradzia_pabaigos2, end=pabaiga_pabaigos2, ID=as.character(mcols(ext_sRNR)[j,]), tipas="galinis" )  
+        blogas_rez <- data.table(start=NA, end=NA, ID=as.character(mcols(ext_sRNR)[j,]), tipas="joks" )
+        visi <- rbind(vidurinis_rez, pradinis_rez, pradinis_rez2, galinis_rez, galinis_rez2, blogas_rez)
+        rezu <- visi[c(vidurinis_ok, pradinis_ok, pradinis2_ok, galinis_ok, galinis2_ok, blogas_ok), ] 
+        } else {rezu <- data.table(start=NA, end=NA, ID=as.character(mcols(ext_sRNR)[j,]), tipas="joks" )}
+        return(rezu )
+                                                                        }
+  
+    # visi rezultatai kartu
+    rez_total <- rbind(as.data.table(positivai) %>% .[, strand := "+"], as.data.table(negativai) %>% .[, strand := "-"]) %>% 
+      as.data.table %>% 
+      .[tipas != "joks", ] %>% 
+      .[, tipas := NULL] %>% 
+      setnames(., c("start", "end", "ID", "strand")) %>% 
+      .[, chr := "NC_009004.1"] %>% 
+      .[, ID := paste0(start, "_", end)] %>% 
+      .[abs(start - end) <= 600, ] %>% 
+      .[abs(start - end) >= 40, ] %>% 
+      unique()
+    
+    rez <- rez_total %>%
+      as.data.table() %>%  
+      .[, ID := NULL] %>% 
+      unique() %>% 
+      .[, ID := paste0(start, "_", end)] %>% 
+      makeGRangesFromDataFrame(., keep.extra.column=TRUE) 
+  return(rez)
+}
+
+sRNR_list <- foreach(i=samples2do) %do% {
+  rez <- sRNR_list[[i]]
+  return(filter_coord(rez, i, pratempimas=100, dSam=samplesInfo[Sample==i, ], th=2.99))
+  }
+names(sRNR_list) <- samples2do
+saveRDS(sRNR_list, paste0(outdatadir, "3X_sRNR.RDS"))
+export(unique(unlist(as(sRNR_list, "GRangesList"))), paste0(outdatadir, "po3X_taisymo.bed"))
+```
+
+
+```{r}
+# calculate fraction of protein that is covered. If vast majority of protein is covered - remove. 
+filter_protein_overlap <- function(sekos, proteins=ptt_prot_pseudo_rnr) {
+  fo <- findOverlaps(sekos, proteins, select="all", ignore.strand=FALSE)
+  pint <- pintersect(sekos[queryHits(fo)], proteins[subjectHits(fo)])
+  rez <- data.table(ID=mcols(sekos[queryHits(fo)])$ID, overlap=width(pint), protLength=width(proteins[subjectHits(fo)])) %>% 
+    .[, fraction := overlap/protLength] 
+  return(rez)
+}
+
+tmp <- foreach(i=samples2do) %do% {
+  rez <- sRNR_list[[i]]
+  protOverlap <- filter_protein_overlap(rez, ptt_prot_pseudo_rnr)
+  return(rez[!(mcols(rez)$ID %in% (protOverlap[fraction >= 0.7, ID] %>% unique))])
+  }
+
+sRNR_list <- copy(tmp)
+names(sRNR_list) <- samples2do
+saveRDS(sRNR_list, paste0(outdatadir, "ProtOver_sRNR.RDS"))
+export(unique(unlist(as(sRNR_list, "GRangesList"))), paste0(outdatadir, "poProteinsOverlap.bed"))
+names(sRNR_list) <- samples2do
+```
+
+```{r}
+# additional filter
+vertink_galus <- function(meginys, sRNR_list, pratempimas=100) {
+  rezu <- list()
+  RNR <- sRNR_list[[meginys]]
+  bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_99.bam")
+  tipas_p <- countOverlaps(RNR[strand(RNR) =="+",]+50, ptt_prot_pseudo_rnr, ignore.strand=FALSE)
+  tipas_p[tipas_p>0] <- 1
+  ext_sRNR <- RNR[strand(RNR) =="+",] + pratempimas
+  names(ext_sRNR) <- mcols(ext_sRNR)$ID
+  bprof <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE)
+  dlistp <- as.list(bprof)
+  names(dlistp) <-  paste0("sRNR_", mcols(ext_sRNR)$ID, "_", tipas_p)
+  
+  pliusiniai <- foreach(k=1:length(dlistp), .combine="rbind") %do% { 
+    seka <- dlistp[[k]]
+    startas <- 101
+    endas <- length(seka) - 100
+    startiniai <- foreach(j=c(0, 2, 4, 6, 8), .combine="c") %do% {mean(seka[(startas+j):(startas+j+5)])} 
+    upstream <- foreach(j=c(-6, -8, -10, -12, -14), .combine="c") %do% {mean(seka[(startas+j):(startas+j+5)])} 
+    galiniai <- foreach(j=c(13, 11, 9, 7, 5), .combine="c") %do% {mean(seka[(endas-j):(endas-j+5)])} 
+    downstream <- foreach(j=c(1, 3, 5, 7, 9), .combine="c") %do% {mean(seka[(endas+j):(endas+j+5)])} 
+    vidurkiai <- mean(seka[startas:endas])
+  c(mean(startiniai)/mean(seka[startas:endas]), mean(galiniai)/mean(seka[startas:endas]), mean(upstream)/mean(seka[startas:endas]), 
+    mean(downstream)/mean(seka[startas:endas]), sd(upstream)/mean(upstream), sd(startiniai)/mean(startiniai), sd(galiniai)/mean(galiniai), sd(downstream)/mean(downstream),
+    vidurkiai)
+  } %>% as.data.frame()
+  rownames(pliusiniai) <- paste0("sRNR_", mcols(ext_sRNR)$ID, "_", tipas_p)
+  
+  ext_sRNR <- RNR[strand(RNR) =="-",] + pratempimas
+  bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_83.bam")
+  tipas_n <- countOverlaps(RNR[strand(RNR) =="-",]+50, ptt_prot_pseudo_rnr, ignore.strand=FALSE)
+  tipas_n[tipas_n>0] <- 1
+  bprof <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE)
+  dlistn <- as.list(bprof)
+  names(dlistn) <-  paste0("sRNR_", mcols(ext_sRNR)$ID, "_", tipas_n)
+  
+  minusiniai <- foreach(k=1:length(dlistn), .combine="rbind") %do% { 
+    seka <- rev(dlistn[[k]])
+    startas <- 101
+    endas <- length(seka) - 100
+    startiniai <- foreach(j=c(0, 2, 4, 6, 8), .combine="c") %do% {mean(seka[(startas+j):(startas+j+5)])} 
+    upstream <- foreach(j=c(-6, -8, -10, -12, -14), .combine="c") %do% {mean(seka[(startas+j):(startas+j+5)])} 
+    galiniai <- foreach(j=c(13, 11, 9, 7, 5), .combine="c") %do% {mean(seka[(endas-j):(endas-j+5)])} 
+    downstream <- foreach(j=c(1, 3, 5, 7, 9), .combine="c") %do% {mean(seka[(endas+j):(endas+j+5)])} 
+    vidurkiai <- mean(seka[startas:endas])
+  c(mean(startiniai)/mean(seka[startas:endas]), mean(galiniai)/mean(seka[startas:endas]), mean(upstream)/mean(seka[startas:endas]),
+   mean(downstream)/mean(seka[startas:endas]), sd(upstream)/mean(upstream), sd(startiniai)/mean(startiniai), sd(galiniai)/mean(galiniai), sd(downstream)/mean(downstream), 
+   vidurkiai)
+  } %>% as.data.frame()
+   rownames(minusiniai) <- paste0("sRNR_", mcols(ext_sRNR)$ID, "_", tipas_n)
+  
+  return(list(dlistp, dlistn, pliusiniai, minusiniai))
+}
+
+klasifikuok <- function(x, vardai, th1=0.7, th2=1.3) {
+  tmp <- x[rownames(x) %in% vardai, ] %>% 
+    as.data.table(., keep.rownames=TRUE) %>%
+    .[, NR := 1:.N] %>%  
+    .[, Tipas := "NEAISKU"] %>% 
+    .[(V1 >= th1) & (V1 <= th2) & (V2 >= th1) & (V2 <= th2), Tipas := "GERI"] %>%
+    .[(V1 > th2) | (V2 > th2), Tipas := "DUOBES"] %>%
+    .[(V1 < th1) | (V2 < th1), Tipas := "NESAMONES"] %>%
+    .[V3 < 0.001 & V4 < 0.01 & V7 < 0.007, Tipas := "GERI" ] %>%  
+    .[V9 <= 20 , Tipas := "NESAMONES"] %>% 
+    .[] 
+  return(tmp)    
+}
+
+```
+
+```{r}
+geri <- foreach(i=1:length(samples2do), .combine="rbind") %do% {
+  rezu <- vertink_galus(samples2do[i], sRNR_list); 
+  saveRDS(rezu, paste0(outdatadir, samples2do[i], "_sRNR_stats.RDS"))
+
+  intergenines_p <- grepl("_0$", names(rezu[[1]]))
+  genines_p <- grepl("_1$", names(rezu[[1]]))
+
+  intergenines_n <- grepl("_0$", names(rezu[[2]]))
+  genines_n <- grepl("_1$", names(rezu[[2]]))
+
+  geri1 <- klasifikuok(rezu[[3]], names(rezu[[1]][intergenines_p]), 0.50, 1.55) %>% .[Tipas == "GERI", rn] %>% as.data.table() %>%  .[, strand := "+"]
+  geri2 <- klasifikuok(rezu[[3]], names(rezu[[1]][genines_p]), 0.50, 1.55) %>% .[Tipas == "GERI", rn] %>% as.data.table() %>% .[, strand := "+"]
+  geri3 <- klasifikuok(rezu[[4]], names(rezu[[2]][intergenines_n]), 0.50, 1.55) %>% .[Tipas == "GERI", rn] %>% as.data.table() %>% .[, strand := "-"]
+  geri4 <- klasifikuok(rezu[[4]], names(rezu[[2]][genines_n]), 0.50, 1.55) %>% .[Tipas == "GERI", rn] %>% as.data.table() %>% .[, strand := "-"]
+
+  dgeri <- rbind(geri1, geri2, geri3, geri4) %>% 
+    as.data.table() %>% 
+    setnames(., c("ID", "strand")) %>% 
+    .[, samplas := samples2do[i]] %>% 
+    .[] 
+  dgeri  
+  }
+
+saveRDS(geri, paste0(outdatadir, "geri.RDS"))
+
+blogi <- foreach(i=1:length(samples2do), .combine="rbind") %do% {
+  rezu <- readRDS(paste0(outdatadir, samples2do[i], "_sRNR_stats.RDS"))
+  intergenines_p <- grepl("_0$", names(rezu[[1]]))
+  genines_p <- grepl("_1$", names(rezu[[1]]))
+
+  intergenines_n <- grepl("_0$", names(rezu[[2]]))
+  genines_n <- grepl("_1$", names(rezu[[2]]))
+
+  blogi1 <- klasifikuok(rezu[[3]], names(rezu[[1]][intergenines_p]), 0.50, 1.55) %>% .[Tipas != "GERI", rn] %>% as.data.table() %>% .[, strand := "+"]
+  blogi2 <- klasifikuok(rezu[[3]], names(rezu[[1]][genines_p]), 0.50, 1.55) %>% .[Tipas != "GERI", rn] %>% as.data.table() %>% .[, strand := "+"]
+  blogi3 <- klasifikuok(rezu[[4]], names(rezu[[2]][intergenines_n]), 0.55, 1.55) %>% .[Tipas != "GERI", rn] %>% as.data.table() %>% .[, strand := "-"]
+  blogi4 <- klasifikuok(rezu[[4]], names(rezu[[2]][genines_n]), 0.50, 1.55) %>% .[Tipas != "GERI", rn] %>% as.data.table() %>% .[, strand := "-"]
+
+  dblogi <- rbind(blogi1, blogi2, blogi3, blogi4) %>% 
+    as.data.table() %>% 
+    setnames(., c("ID", "strand")) %>% 
+    .[, samplas := samples2do[i]] %>% 
+    .[]
+  dblogi    
+  }
+saveRDS(blogi, paste0(outdatadir, "blogi.RDS"))  
+```
+
+```{r}
+geri_gr <- geri %>% 
+  as.data.table() %>% 
+  .[, seqnames := "NC_009004.1"] %>% 
+  .[, start := strsplit(ID, "_") %>% sapply(., `[`, 2)] %>% 
+  .[, end := strsplit(ID, "_") %>% sapply(., `[`, 3)] %>%  
+  makeGRangesFromDataFrame(, keep.extra.columns=TRUE)
+
+pasikartojimai <- foreach(i=1:length(geri_gr), .combine="c") %do% {
+  bible <- mcols(geri_gr[i])$samplas 
+  countOverlaps(geri_gr[i], geri_gr[mcols(geri_gr)$samplas != bible])
+}
+geri_gr <- geri_gr[pasikartojimai > 0, ]
+
+saveRDS(geri_gr, paste0(outdatadir, "Pasikartojimai.RDS"))
+export(geri_gr, paste0(outdatadir, "Pasikartojancios.bed"))
+```
+
+```{r}
+################################# 
+#Remove overlap with tRNA
+fo <- findOverlaps(geri_gr, ptt_RNA_gr)
+pint <- pintersect(geri_gr[queryHits(fo)], ptt_RNA_gr[subjectHits(fo)])
+blogi <- pint[(width(pint)/width(ptt_RNA_gr[subjectHits(fo)])) > 0.5]
+geri_gr <- geri_gr[countOverlaps(geri_gr, blogi) == 0]
+```
+
+```{r}
+################################# 
+#Remove manual curation 
+ismetimui <- c(
+  geri_gr[start(geri_gr) > 372590 & start(geri_gr) < 372599],
+  geri_gr[start(geri_gr) > 820560 & start(geri_gr) < 820570],
+  geri_gr[start(geri_gr) > 820640 & start(geri_gr) < 820650],
+  geri_gr[start(geri_gr) > 1514090 & start(geri_gr) < 1514099],
+  geri_gr[start(geri_gr) > 1658870 & start(geri_gr) < 1658880],
+  geri_gr[start(geri_gr) > 1693240 & start(geri_gr) < 1693260],
+  geri_gr[start(geri_gr) > 1904050 & start(geri_gr) < 1904060]) 
+mcols(ismetimui)$ID <- paste0(seqnames(ismetimui), "_", start(ismetimui), "_", end(ismetimui), "_", strand(ismetimui))  
+
+geri_gr <- geri_gr[countOverlaps(geri_gr, ismetimui) == 0, ]
+saveRDS(geri_gr, paste0(outdatadir, "Manual.RDS"))
+```
+
+```{r}
+geri_bc <- copy(geri_gr)
+################################# 
+# Manual update for coordinates corection  - there is one bp shift in these due to unidentified T (terminator site)
+geri_gr <- geri_gr %>% 
+  as.data.table() %>% 
+  .[start > 643470 & start < 643475, start := 643474] %>% 
+  .[end > 549395 & end < 549399, end := 549392] %>% 
+  .[end > 956030 & end < 956035, end := 956027] %>% 
+  makeGRangesFromDataFrame(., keep.extra.column=TRUE)
+
+# Manual update for coordinates corection  - there is one bp shift in these due to unidentified T (terminator site)
+geri_gr <- geri_gr %>% 
+  as.data.table() %>% 
+  .[start > 691435 & start < 691445, start := 691442] %>% 
+  makeGRangesFromDataFrame(., keep.extra.column=TRUE)
+
+toexp <- reduce(geri_gr)
+
+names(toexp) <- paste0(start(toexp), "_", end(toexp), "_", strand(toexp))
+export(toexp, paste0(outdatadir, "selectedsRNR.bed"))
+```
+
+```{r}
+# Look in the genome for these sequences (because we may have missed some identical sequenes)
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "selectedsRNR.fasta"), " -bed ",  paste0(outdatadir, "selectedsRNR.bed"), " -name -s")
+system(cmd)
+system("mkdir tmp")
+FASTA <- paste0("../", outdatadir, "selectedsRNR.fasta")
+
+cmd <- paste0("./code/pamestu_paieska.sh ", FASTA, " NC_009004.fasta .", outdatadir, "pairwise_sim.csv")
+tmp <- system(cmd, intern=FALSE)
+
+cmd <- paste("mv ./tmp/Identiski_genome.tsv", outdatadir)
+tmp <- system(cmd, intern=FALSE)
+cmd <- paste("rmdir tmp/")
+system(cmd, intern=FALSE)
+
+gr2 <- fread(cmd=paste0("cat ", outdatadir, "Identiski_genome.tsv", "|", 'tr " " "\n" | tr "\t" "\n" | grep "^NC"'), header=FALSE) %>% 
+  unique %>%
+  .[, seqnames := strsplit(V1, ":") %>% sapply(., `[`, 1)] %>% 
+  .[, start := strsplit(V1, "-") %>% sapply(., `[`, 1) %>% gsub("NC_009004.1:", "", .) %>% as.numeric()] %>% 
+  .[, end := strsplit(V1, "-") %>% sapply(., `[`, 2) %>% gsub("\\(.+", "", .) %>% gsub("\\(", "", .)] %>% 
+  .[, strand := strsplit(V1, "\\(") %>% sapply(., `[`, 2) %>% gsub(")", "", .)] %>% 
+  .[strand == "+", start := start + 1 ] %>% 
+  .[, V1 := NULL] %>% 
+  makeGRangesFromDataFrame(.) %>% 
+  reduce() %>% 
+  as.data.table() %>% 
+  .[, source := "rtracklayer"] %>% 
+  .[, type := "sRNA"] %>% 
+  .[, score := 50] %>% 
+  .[, phase := NA] %>% 
+  .[, ID := paste0(start, "_", end, "_", strand)] %>% 
+  .[, Name := ID] %>% 
+  .[, locus_tag := ID] %>% 
+  .[, feature := "sRNA"] %>% 
+  .[, gene_biotype := "sRNR"] %>%
+  makeGRangesFromDataFrame(., keep.extra.column=TRUE)
+names(gr2) <- mcols(gr2)$ID  
+
+gr2 <- gr2[countOverlaps(gr2, toexp) == 0]
+```
+
+```{r}
+finalfinalfinal <- c(toexp, gr2) 
+mcols(finalfinalfinal)$ID <- paste(start(finalfinalfinal), end(finalfinalfinal), strand(finalfinalfinal), sep="_")
+mcols(finalfinalfinal)$Name <- paste(start(finalfinalfinal), end(finalfinalfinal), strand(finalfinalfinal), sep="_")
+mcols(finalfinalfinal)$locus_tag <- paste(start(finalfinalfinal), end(finalfinalfinal), strand(finalfinalfinal), sep="_")
+mcols(finalfinalfinal)$feature <- "sRNA"
+mcols(finalfinalfinal)$gene_biotype <- "sRNA"
+mcols(finalfinalfinal)$score <- 50
+names(finalfinalfinal) <- mcols(finalfinalfinal)$ID
+
+export(finalfinalfinal, paste0(outdatadir, "sRNA.bed"))
+export(finalfinalfinal, paste0(outdatadir, "sRNA.gff3"))
+saveRDS(finalfinalfinal, paste0(outdatadir, "sRNA.RDS"))
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "sRNA.fasta"), " -bed ",  paste0(outdatadir, "sRNA.bed"), " -name -s")
+system(cmd)
+```
+
+
+```{r, eval=FALSE}
+# check for subsets. Not run as this was investigated manually
+gr <- c(finalfinalfinal)
+mcols(gr)$score <- 50
+names(gr) <- mcols(gr)$ID
+export(gr, paste0(outdatadir, "sRNA.bed"))
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "sRNAs.fasta"), " -bed ",  paste0(outdatadir, "sRNA.bed"), " -name -s")
+system(cmd)
+cmd <- paste0("cat ", outdatadir, "sRNAs.fasta | paste - - | sort -nk2 > ", "tmp.txt")
+system(cmd)
+cmd <- "while read line; do eilute=$(echo $line | awk '{print $2}'); ID=$(echo $line | awk '{print $1}'); kiekis=$(grep -c $eilute tmp.txt); echo $kiekis | awk -v kiek=kiekis -v seka=${eilute} -v ID=${ID} '{if($kiek > 1) {print ID, seka}}'; done < tmp.txt | sort -k2 > daugybiniai.txt"
+system(cmd)
+cmd <- paste0("mv daugybiniai.txt ", outdatadir)
+system(cmd)
+```
+

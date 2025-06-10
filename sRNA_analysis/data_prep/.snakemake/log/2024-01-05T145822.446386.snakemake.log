@@ -1,0 +1,48 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 10
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count    min threads    max threads
+---------------  -------  -------------  -------------
+all                    1              1              1
+dedup_data             7             10             10
+extend_reads           7              6              6
+map_data_hisat2        7             10             10
+move_left              7              1              1
+remap                  7             10             10
+total                 36              1             10
+
+Select jobs to execute...
+
+[Fri Jan  5 14:58:22 2024]
+rule map_data_hisat2:
+    input: output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/FivePoints_1.bam, output/FivePoints_1/FivePoints_1.bam.bai
+    log: logs/FivePoints_1/hisat2.log
+    jobid: 59
+    reason: Code has changed since last execution
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 15:01:15 2024]
+Error in rule map_data_hisat2:
+    jobid: 59
+    input: output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/FivePoints_1.bam, output/FivePoints_1/FivePoints_1.bam.bai
+    log: logs/FivePoints_1/hisat2.log (check log file(s) for error details)
+    shell:
+        
+        /mnt/store/DMTS/common_programs/hisat2-2.2.1/hisat2 -p 10 -k 10 --no-unal --no-spliced-alignment -X 500 --no-mixed --no-discordant --new-summary --summary-file logs/FivePoints_1/hisat2.log -x /mnt/store/annotations/NC_009004/NC_009004.fasta -1 output/FivePoints_1/03_FivePoints_1_R1.fastq.gz -2 output/FivePoints_1/03_FivePoints_1_R2.fastq.gz -S output/FivePoints_1/hisat2.sam
+        samtools sort -@ 10 -n  output/FivePoints_1/hisat2.sam -o output/FivePoints_1/FivePoints_1.bam
+        rm output/FivePoints_1/hisat2.sam
+        samtools index output/FivePoints_1/FivePoints_1.bam
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job map_data_hisat2 since they might be corrupted:
+output/FivePoints_1/FivePoints_1.bam
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: ../../../../../scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/.snakemake/log/2024-01-05T145822.446386.snakemake.log

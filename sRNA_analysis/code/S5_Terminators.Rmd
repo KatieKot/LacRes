@@ -1,0 +1,190 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr)
+dir.create(outdatadir, recursive = TRUE)
+sRNR <- readRDS("./output/code/FinalTable/all_sRNA.RDS") 
+mcols(sRNR)$short_name <- NULL 
+mcols(sRNR)$sarasas <- NULL 
+```
+
+```{r}
+# Arnold table
+arnold <- fread("grep -v '>' ./input/ARNold.txt") %>% 
+  setnames(., c("start", "program", "strand", "seq", "score")) %>% 
+  .[, tmp := gsub ("\\(", "", seq) %>% gsub (")", "", .) ] %>% 
+  .[, len := nchar(tmp)] %>% 
+  .[, end := start + len - 1 ] %>%
+  .[, chr := "NC_009004.1"] %>% 
+  .[, `:=` (len = NULL, tmp = NULL)] %>% 
+  .[is.na(score), score := 0] %>% 
+  makeGRangesFromDataFrame(., keep.extra.column=TRUE)
+
+ov <- findOverlaps(arnold, arnold, type="within", select="all")
+arnold <- arnold[-queryHits(ov[queryHits(ov) != subjectHits(ov)])]
+
+export.bed(arnold, con=paste0(outdatadir, 'ARNold_terminatoriai.bed'))
+overlaps <- findOverlaps(sRNR, arnold, ignore.strand=FALSE, select="all")
+piint <- pintersect(arnold[subjectHits(overlaps)], sRNR[queryHits(overlaps)])
+percentOverlap <- width(piint) / width(arnold[subjectHits(overlaps)])
+hits <- overlaps[percentOverlap>0.50]
+
+overlapai_arn <- arnold[subjectHits(hits)]
+overlapai_sRNR <- sRNR[queryHits(hits)]
+
+# atrenkam tuos, kur netoli nuo pabaigos 
+i <- ((end(overlapai_sRNR[strand(overlapai_sRNR) == "+", ]) - end(overlapai_arn[strand(overlapai_arn) == "+", ])) / width(overlapai_arn[strand(overlapai_arn) == "+", ]) < 0.5) & 
+(end(overlapai_sRNR[strand(overlapai_sRNR) == "+", ]) - end(overlapai_arn[strand(overlapai_arn) == "+", ])) / width(overlapai_arn[strand(overlapai_arn) == "+", ]) > -0.5
+
+j <- ((start(overlapai_sRNR[strand(overlapai_sRNR) == "-", ]) - start(overlapai_arn[strand(overlapai_arn) == "-", ])) / width(overlapai_arn[strand(overlapai_arn) == "-", ])) < 0.5 & 
+(start(overlapai_sRNR[strand(overlapai_sRNR) == "-", ]) - start(overlapai_arn[strand(overlapai_arn) == "-", ])) / width(overlapai_arn[strand(overlapai_arn) == "-", ]) > -0.5
+
+overlapai_arn <- c(
+overlapai_arn[strand(overlapai_arn) == "+", ][i],
+overlapai_arn[strand(overlapai_arn) == "-", ][j])
+
+overlapai_sRNR <- c(overlapai_sRNR[strand(overlapai_sRNR) == "+", ][i],
+                    overlapai_sRNR[strand(overlapai_sRNR) == "-", ][j])
+
+export.bed(overlapai_arn, con=paste0(outdatadir, 'Atrinkti_ARNold_terminatoriai.bed'))
+
+dd <- cbind(
+  overlapai_sRNR %>% 
+  as.data.table %>% .[, `:=` (width = NULL, strand = NULL, score = NULL, Name = NULL, source = NULL, type = NULL, phase = NULL, locus_tag = NULL, feature = NULL, gene_biotype = NULL)] %>% 
+                    setnames(., c("chr", "start_sRNR", "end_sRNRterm", "GeneID")),
+  overlapai_arn %>% 
+    as.data.table %>% .[, `:=` (width = NULL, strand = NULL, seqnames = NULL)] %>% setnames(., c("start_term", "end_term", "program_term", "seq_term", "score_term"))
+    )
+
+#DT::datatable(dd[, c("chr", "GeneID", "start_term", "end_term", "score_term", "seq_term", "program_term"), with=FALSE])
+saveRDS(dd[, c("chr", "GeneID", "start_term", "end_term", "score_term", "seq_term", "program_term"), with=FALSE], paste0(outdatadir, "ARNold_term.RDS"))
+
+dd_arnold <- copy(dd)
+```
+
+
+```{r}
+#bprom dalis 
+d1 <- fread("grep -e '^+' -e '^-' input/0-1000000.termpred", header = F)
+d2 <- fread("grep -e '^+' -e '^-' input/900000-1900000.termpred", header = F) %>% 
+  .[, V2 := V2 + 900000]
+d3 <- fread("grep -e '^+' -e '^-' input/1800000-2529478.termpred", header = F) %>% 
+  .[, V2 := V2 + 1800000]
+
+term_ranges <- rbind(d1, d2, d3) %>% 
+  unique %>% 
+  as.data.table %>% 
+  setnames(., c("strand", "start", "length", "quality")) %>% 
+  .[, end := start + length - 1] %>% 
+  .[, length := NULL] %>% 
+  .[, chr := "NC_009004.1"] %>%
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+  
+ov <- findOverlaps(term_ranges, term_ranges, type="within", select="all")
+term_ranges <- term_ranges[-queryHits(ov[queryHits(ov) != subjectHits(ov)])]
+
+export.bed(term_ranges, con=paste0(outdatadir, 'Visi_findTerm_terminatoriai.bed'))
+
+overlaps <- findOverlaps(sRNR, term_ranges, ignore.strand=FALSE, select="all")
+piint <- pintersect(term_ranges[subjectHits(overlaps)], sRNR[queryHits(overlaps)])
+percentOverlap <- width(piint) / width(term_ranges[subjectHits(overlaps)])
+hits <- overlaps[percentOverlap>0.50]
+overlapai_term <- term_ranges[subjectHits(hits)]
+overlapai_sRNR <- sRNR[queryHits(hits)]
+
+# atrenkam tuos, kur netoli nuo pabaigos 
+i <- ((end(overlapai_sRNR[strand(overlapai_sRNR) == "+", ]) - end(overlapai_term[strand(overlapai_term) == "+", ])) / width(overlapai_term[strand(overlapai_term) == "+", ]) < 0.5) & 
+      (end(overlapai_sRNR[strand(overlapai_sRNR) == "+", ]) - end(overlapai_term[strand(overlapai_term) == "+", ])) / width(overlapai_term[strand(overlapai_term) == "+", ]) > -0.5
+
+j <- ((start(overlapai_sRNR[strand(overlapai_sRNR) == "-", ]) - start(overlapai_term[strand(overlapai_term) == "-", ])) / width(overlapai_term[strand(overlapai_term) == "-", ]) < 0.5) & 
+    (start(overlapai_sRNR[strand(overlapai_sRNR) == "-", ]) - start(overlapai_term[strand(overlapai_term) == "-", ])) / width(overlapai_term[strand(overlapai_term) == "-", ]) > -0.5
+
+overlapai_term <- c(
+overlapai_term[strand(overlapai_term) == "+", ][i],
+overlapai_term[strand(overlapai_term) == "-", ][j])
+
+overlapai_sRNR <- c(
+overlapai_sRNR[strand(overlapai_sRNR) == "+", ][i],
+overlapai_sRNR[strand(overlapai_sRNR) == "-", ][j])
+
+export.bed(overlapai_term, con=paste0(outdatadir, 'Atrinkti_findTerm_terminatoriai.bed'))
+
+dd <- cbind(
+  overlapai_sRNR  %>% 
+  as.data.table %>% .[, `:=` (width = NULL, strand = NULL, score = NULL, Name = NULL, source = NULL, type = NULL, phase = NULL, locus_tag = NULL, feature = NULL, gene_biotype = NULL)] %>% 
+        setnames(., c("chr", "start_sRNR", "end_sRNRterm", "GeneID")),
+  overlapai_term %>% 
+    as.data.table %>% .[, width:=NULL] %>% setnames(., c("chr_termPred", "start_termPred", "end_termPred", "strand_termPred", "quality_termPred")))
+
+dd$ID <- paste0(dd$start_termPred, "_", dd$strand_termPred)
+
+####################### atskiras kodas, kuris iskerpa tik terminatoriaus seka ir randa vidurini nukleotida (pagal simetrija)
+do_terminators_table <- function(x) {
+  d <- readLines("tmp.txt")
+  df <- data.frame(matrix(nrow=sum(grepl("^\\+|^-", d)), ncol=7)) %>% as.data.table
+  setnames(df, c("strand", "start", "length", "score", "pos", "seq", "structure"))
+  iteratorius <- 0
+  for (i in 1:length(d)) {
+    eilute <- d[i]
+    if(grepl("^\\+|^-", eilute)) {
+      iteratorius <- iteratorius + 1
+      df$strand[iteratorius]  <- strsplit(eilute, " +") %>% sapply(., `[`, 1 ) %>% unlist
+      df$start[iteratorius] <- strsplit(eilute, " +") %>% sapply(., `[`, 2 ) %>% as.numeric
+      df$length[iteratorius] <- strsplit(eilute, " +") %>% sapply(., `[`, 3 ) %>% as.numeric
+      df$score[iteratorius] <- (strsplit(eilute, " +") %>% sapply(., `[`, 4 ) %>% as.numeric)
+    } else if (grepl("^a|^t|^u|^g|^c", eilute, ignore.case = TRUE)) {df$seq[iteratorius] <- paste0(df$seq[iteratorius], eilute)} 
+          else if (grepl("^\\.|^\\(|^\\)", eilute)) { df$structure[iteratorius] <- paste0(df$structure[iteratorius], eilute) } 
+                else { df$pos[iteratorius] <- paste(df$pos[iteratorius], eilute)}
+  }
+
+  df$seq <- gsub("NA", "", df$seq )
+  df$score <- gsub("NA", "", df$score )
+  df$structure <- gsub("NA", "", df$structure )
+  df$pos <- gsub("NA +", "", df$pos ) %>% strsplit(., " ") %>% sapply(., `[`, 1) %>% as.numeric 
+  df$pos <- df$pos - 10
+  for (iteratorius in 1:nrow(df)) {
+    df$real_seq[iteratorius] <- substr(df$seq[iteratorius], df$start[iteratorius]- df$pos[iteratorius], df$start[iteratorius]- df$pos[iteratorius] + df$length[iteratorius] - 1)  
+    df$real_struc[iteratorius] <- substr(df$struct[iteratorius], df$start[iteratorius]- df$pos[iteratorius], df$start[iteratorius]- df$pos[iteratorius] + df$length[iteratorius] - 1) 
+                                  }
+  df$vidurys <- df$start + floor(df$length/2) + x 
+  df$start <- df$start + x 
+  df$pos <- df$pos + x 
+return(df)
+}
+
+system(c("cat input/0-1000000.termpred | sed -n '/^+/,/^GCG/p' | grep -v ^G > ./tmp.txt; cat input/0-1000000.termpred | sed -n '/^-/,/^GCG/p' | grep -v ^G >> ./tmp.txt"))
+termpred <- do_terminators_table(0)
+
+system(c("cat input/900000-1900000.termpred | sed -n '/^+/,/^GCG/p' | grep -v ^G > ./tmp.txt; cat input/900000-1900000.termpred | sed -n '/^-/,/^GCG/p' | grep -v ^G >> ./tmp.txt"))
+termpred <- rbind(termpred, do_terminators_table(900000))
+
+system(c("cat input/1800000-2529478.termpred | sed -n '/^+/,/^GCG/p' | grep -v ^G > ./tmp.txt; cat input/1800000-2529478.termpred | sed -n '/^-/,/^GCG/p' | grep -v ^G >> ./tmp.txt"))
+termpred <- rbind(termpred, do_terminators_table(1800000))
+
+system("rm tmp.txt")
+termpred <- unique(termpred)
+termpred$ID <- paste(termpred$start, termpred$strand, sep="_")
+
+termpred[strand == "-", `:=` (seq = rev(seq), structure = rev(structure), real_struc = rev(real_struc), real_seq=rev(real_seq))] 
+###########################################
+
+dd <- merge(dd, termpred, by="ID")
+#DT::datatable(dd)
+saveRDS(dd, paste0(outdatadir, "findTerm.RDS"))
+
+dd_findTerm <- copy(dd)
+```
+
+
+```{r}
+#dd_arnold 
+#dd_findTerm 
+d <- merge((dd_arnold[, .(GeneID, start_term, end_term, program_term, score_term, seq_term)]), 
+      (dd_findTerm[, .(GeneID, start_termPred, end_termPred, quality_termPred, seq)]), all=TRUE) %>% 
+      merge((sRNR %>% as.data.table() %>% .[, .(ID, strand, start, end)] %>% setnames("ID", "GeneID")), ., by="GeneID") %>% 
+      as.data.table() %>% 
+      setnames("GeneID", "Name")
+
+saveRDS(d, paste0(outdatadir, "S5_terminators.RDS"))
+```
+
+

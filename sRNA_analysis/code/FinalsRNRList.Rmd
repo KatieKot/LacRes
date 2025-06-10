@@ -1,0 +1,311 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, 
+foreach, rtracklayer, readr, tximport, DESeq2, edgeR, stringr)
+dir.create(outdatadir, recursive = TRUE)
+```
+Susiskaitom turima sarasa. Sutikrinam, ar vienodos yra tikrai vienodos ir dar sutikrinam, ar genome daugiau nera tokiu paciu. Jei yra - pridedam tam, kad veliau raiskas suskaiciuoti. 
+
+```{r}
+# reikia gauti motinines ir vaikines 
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "sRNAs.fasta"), " -bed ",  paste0("output/code/PrepData_Var2/", "sRNA.bed"), " -name -s")
+system(cmd)
+sekos <- seqinr::read.fasta(paste0(outdatadir, "sRNAs.fasta"), as.string=TRUE, strip.desc=TRUE)
+atitikimai <- data.table(ID=NULL, rezultatai=NULL)
+
+pasikartojancios <- foreach(i=1:length(sekos)) %do% {
+  uzklausa <- sekos[[i]]
+  names(uzklausa) <- seqinr::getName(uzklausa)
+  duombaze <- sekos[-i] %>% unlist()
+  rezultatas <- duombaze[uzklausa == duombaze]
+  atitikimai <- NULL
+  if(length(rezultatas) > 0) {
+    atitikimai <- c(uzklausa, rezultatas) %>% 
+      names() %>% 
+      as.data.table() %>% 
+      setnames(., "ID") %>% 
+      .[, coord1 := strsplit(ID, "_") %>% sapply(., `[`, 1) %>% as.numeric()] %>% 
+      .[, coord2 := strsplit(ID, "_") %>% sapply(., `[`, 2) %>% as.numeric()] %>% 
+      .[, coord3 := strsplit(ID, "_") %>% sapply(., `[`, 3) %>% gsub("::.*", "", .)] %>% 
+      .[coord1 < coord2, start := coord1] %>% 
+      .[coord1 > coord2, start := coord2] %>% 
+      setkey(., start) %>% 
+      .[, ID] %>% 
+      .[]
+
+    #duombaze <- duombaze[-((names(duombaze) %in% atitikimai))]
+  } 
+  atitikimai
+}
+
+pasikartojancios[lapply(pasikartojancios, length) > 0] %>% unique
+
+```
+
+
+```{r}
+# Toliau reikia issirusiuoti multikopijines ir suteikti padorius vardus tolimesniam darbui. 
+# Issisaugom FASTA:
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "sRNAs.fasta"), " -bed ",  paste0("output/code/PrepData_Var2/", "sRNA.bed"), " -name -s")
+system(cmd)
+# Naujai susirandam identiskas.  
+FASTA <- paste0("../", outdatadir, "sRNAs.fasta")
+cmd <- paste0("./code/find_identical.sh ", FASTA, " NC_009004.fasta .", outdatadir, "pairwise_sim.csv 2>>logs.txt")
+tmp <- system(cmd, intern=FALSE)
+
+cmd <- paste("mv ./tmp/IDENTISKOS.txt", outdatadir, "; mv ./tmp/POAIBIAI.txt", outdatadir, "; mv ./tmp/Atitikimai_genome.tsv", outdatadir)
+tmp <- system(cmd, intern=FALSE)
+cmd <- paste("mv ./tmp/*.txt", outdatadir)
+tmp <- system(cmd, intern=FALSE)
+cmd <- paste("rm ./tmp/*")
+tmp <- system(cmd, intern=FALSE)
+cmd <- paste("rmdir tmp/")
+system(cmd, intern=FALSE)
+
+remStuf <- function(x) {gsub(">", "", x)%>% gsub(":.*", "", .)}
+### multiloci sekos 
+d <- read.csv(paste0(outdatadir, "IDENTISKOS.txt"), header=FALSE) 
+ident <- foreach(i=1:nrow(d)) %do% {
+  d[i, ] %>% strsplit(., " ") %>% unlist() %>% sapply(., remStuf) %>% unique
+}
+# sito reikia veliau exportavimui excel
+saveRDS(ident, paste0(outdatadir, "IdenticalsRNAs.RDS")) 
+
+if(nrow(d) > 1 ) { 
+  dd <- ident[[1]] %>% 
+    as.data.table() %>% 
+    setnames(., "ID") %>% 
+    .[, sk1 := strsplit(ID, "_")%>% sapply(., `[`, 1) %>% as.numeric()] %>% 
+    .[, sk2 := strsplit(ID, "_")%>% sapply(., `[`, 2) %>% gsub("_.", "", .) %>% as.numeric()] %>% 
+    setkey(., sk1) 
+
+  dd$raide <- LETTERS[1:nrow(dd)] %>% tolower()  
+
+  kairiausia <- head(dd, 1)
+  multikopines_vaikai <- dd[2:nrow(dd), ]
+
+  tmp <- copy(kairiausia)
+  colnames(tmp) <- paste0("m", colnames(tmp))
+  multikopines_vaikai <- cbind(multikopines_vaikai, tmp)
+  
+  foreach(i=2:nrow(d)) %do% {
+    dd <- ident[[i]] %>% 
+      as.data.table() %>% 
+      setnames(., "ID") %>% 
+      .[, sk1 := strsplit(ID, "_")%>% sapply(., `[`, 1) %>% as.numeric()] %>% 
+      .[, sk2 := strsplit(ID, "_")%>% sapply(., `[`, 2) %>% gsub("_.", "", .) %>% as.numeric()] %>% 
+      setkey(., sk1) 
+
+    dd$raide <- LETTERS[1:nrow(dd)] %>% tolower()  
+
+    kairiausia <- rbind(kairiausia, head(dd, 1))
+    
+    tmp1 <- copy(head(dd, 1))
+    colnames(tmp1) <- paste0("m", colnames(tmp1))
+  
+    multikopines_vaikai <- rbind(multikopines_vaikai, cbind(dd[2:nrow(dd), ], tmp1))
+    } 
+    saveRDS(kairiausia, paste0(outdatadir, "MultiMotina.RDS"))
+    saveRDS(multikopines_vaikai, paste0(outdatadir, "MultiVaikai.RDS"))
+    } else {dd <- ident[[1]] %>% 
+      as.data.table() %>% 
+      setnames(., "ID") %>% 
+      .[, sk1 := strsplit(ID, "_")%>% sapply(., `[`, 1) %>% as.numeric()] %>% 
+      .[, sk2 := strsplit(ID, "_")%>% sapply(., `[`, 2) %>% gsub("_.", "", .) %>% as.numeric()] %>% 
+      setkey(., sk1) 
+
+      d$raide <- LETTERS[1:nrow(d)] %>% tolower()  
+
+      kairiausia <- head(dd, 1)
+      multikopines_vaikai <- dd[2:nrow(dd), ]
+      tmp <- copy(kairiausia)
+      colnames(tmp) <- paste0("m", colnames(tmp))
+      multikopines_vaikai <- cbind(multikopines_vaikai, tmp)
+      saveRDS(kairiausia, paste0(outdatadir, "MultiMotina.RDS"))
+      saveRDS(multikopines_vaikai, paste0(outdatadir, "MultiVaikai.RDS"))}
+
+change_names2shorter <- function(x) {
+  #x <- mcols(gr)$short_nam(e
+  #xold <- copy(x)
+  foreach(i=1:length(x), .combine='c') %do% {
+    ID <- x[i]
+    grandine <- str_sub(ID, -1)
+    shorter_x <- str_sub(ID, 1, nchar(ID)-2)
+    if(sum(grepl(paste0("^", shorter_x), x)) == 1) {
+       shorter_x2 <- str_sub(ID, 1, nchar(ID)-4)
+       if(sum(grepl(paste0("^", shorter_x2, "\\."), x)) == 1) {
+          x[i] <- paste0(shorter_x2, grandine)} else {
+            tmp <- strsplit(shorter_x, "\\.")
+            tmp[[1]][1]
+            x[i] <- paste0(tmp[[1]][1], ".", as.numeric(tmp[[1]][2])+1, grandine)
+            #x[i] <- paste0(shorter_x, grandine))
+    }
+  }}
+  return(x)
+}
+
+gr <- readRDS(paste0("output/code/PrepData_Var2/", "sRNA.RDS"))
+gr_plius <- gr[strand(gr) == "+"]
+mcols(gr_plius)$short_name <- paste0(ceiling(start(gr_plius)/1000), ".", ((str_sub(as.character(start(gr_plius)), start= -3) %>% str_sub(., 1, 2)) %>% as.numeric()) %% 100  %>% sprintf("%02d", .), strand(gr_plius)) 
+gr_plius <- sort(gr_plius)
+mcols(gr_plius)$short_name <- change_names2shorter(mcols(gr_plius)$short_name) 
+mcols(gr_plius)$sarasas <- "Bendras"
+
+gr_minus <- gr[strand(gr) != "+"]
+mcols(gr_minus)$short_name <-  paste0(ceiling(start(gr_minus)/1000), ".", ((str_sub(as.character(start(gr_minus)), start= -3) %>% str_sub(., 1, 2)) %>% as.numeric()) %% 100  %>% sprintf("%02d", .), strand(gr_minus)) 
+gr_minus <- sort(gr_minus)
+mcols(gr_minus)$short_name <- change_names2shorter(mcols(gr_minus)$short_name)
+mcols(gr_minus)$sarasas <- "Bendras"
+gr <- c(gr_plius, gr_minus) %>% sort
+
+### ir dar pakeiciam multi i ABC zymejima 
+multi_motina <- readRDS(paste0(outdatadir, "MultiMotina.RDS"))
+multi_vaikai <- readRDS(paste0(outdatadir, "MultiVaikai.RDS"))
+
+# Pervadinam vaikinius- paimam motininio ID ir pridedam raide
+tmp <- foreach(i=1:nrow(multi_vaikai)) %do% { 
+  idukas <- mcols(gr)$short_name[mcols(gr)$ID == multi_vaikai[i, mID]]
+  #trumpas <- paste0(mcols(gr)$short_name[mcols(gr)$ID == multi_vaikai[i, mID]], multi_vaikai[i, raide])
+  trumpas <-  paste0(str_sub(idukas, 1, nchar(idukas)-1), multi_vaikai[i, raide], str_sub(idukas, -1))
+  mcols(gr)$short_name[mcols(gr)$ID ==   multi_vaikai[i, ID]] <- trumpas
+}
+
+# Pervadinam motinines ir pridedam a raide prie ju 
+tmp <- foreach(i=1:nrow(multi_motina)) %do% { 
+  idukas <- mcols(gr)$short_name[mcols(gr)$ID == multi_motina[i, ID]]
+  mcols(gr)$short_name[mcols(gr)$ID ==   multi_motina[i, ID]] <- paste0(str_sub(idukas, 1, nchar(idukas)-1), "a", str_sub(idukas, -1))
+ }
+
+mcols(gr)$source <- "rtracklayer"
+mcols(gr)$type <- "sRNA"
+mcols(gr)$gene_biotype <- "sRNA"
+
+
+```
+
+```{r}
+#ant turimu pravarom koordinaciu poslinkius ir gaunam nauja sarasa. T.y. susirenkam siauriausias koordionates, su kuriomis veliau dirbsime
+
+
+fix_start <- function(coveragai, vidurys, th=3) {
+  for (i in vidurys:3) {
+    if (coveragai[i] < 5) {
+      rezu <- NA; 
+      break
+      } 
+    if ((coveragai[i]/coveragai[i-1] >= th)) {
+      rezu <- i
+      break
+    } else if (coveragai[i]/coveragai[i-2] >= th) {
+       rezu <- i-1
+       break
+    } else {rezu <- NA}
+  } 
+    if (i < 4) {rezu <- NA}
+  return(rezu) 
+}
+
+fix_end <- function(coveragai, vidurys, th=3) {
+  for (i in vidurys:((length(coveragai)-2))) {
+      if (coveragai[i] < 5) {
+        rezu <- NA; 
+        break
+        }
+      if (coveragai[i]/coveragai[i+1] >= th) {
+        rezu <- i
+        break
+      } else if ((coveragai[i]/coveragai[i+2] >= th)) {
+         rezu <- i + 1
+         break
+      } else {rezu <- NA}
+    }
+      if (i < 4) {rezu <- NA}
+    return(rezu) 
+}
+
+correct_coord_by_row <- function(RNR, pratempimas=100, dSam=samplesInfo) {
+  d <- foreach(i=1:length(RNR), .combine="c") %do% {
+    kor_sRNR <- foreach (j=1: nrow(dSam), .combine="cbind") %do% {
+      meginys <- dSam[j, Sample]
+      ext_sRNR <- RNR[i] + pratempimas
+      if (strand(ext_sRNR)@values == "+") {  
+        bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_99.bam")
+        dlist <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE) %>% 
+          as.list() %>% unlist
+        ilgiai <- length(dlist)
+        rezu <- c(start(ext_sRNR) +  fix_start(dlist, ilgiai%/%2) - 1 , 
+              start(ext_sRNR) + fix_end(dlist, ilgiai%/%2) -1,
+              as.character(mcols(ext_sRNR)$ID))
+        if(is.na(rezu[1]) | is.na(rezu[2])) {
+            rezu[1] <- NA
+            rezu[2] <- NA} 
+                                          } else {
+        bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_83.bam")
+        dlist <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE) %>% 
+          as.list() %>% unlist
+        ilgiai <- length(dlist)                                            
+        rezu <- c(start(ext_sRNR) + fix_start(rev(dlist), ilgiai%/%2) -1, 
+              start(ext_sRNR) + fix_end(rev(dlist), ilgiai%/%2) - 1, 
+              as.character(mcols(ext_sRNR)$ID) 
+                 )  
+        if(is.na(rezu[1]) | is.na(rezu[2])) {
+            rezu[1] <- NA
+            rezu[2] <- NA} 
+                                                }
+      return(rezu)
+                                                          } 
+    colnames(kor_sRNR) <- dSam$Sample
+    ID <- kor_sRNR[3, ] %>% unique
+    if(is.na(min(kor_sRNR[1, ], na.rm=TRUE))) {stasu <- strsplit(ID, "_") %>% sapply(., `[`, 1) } else {stasu <- min(kor_sRNR[1, ], na.rm=TRUE)}
+    if(is.na(max(kor_sRNR[2, ], na.rm=TRUE))) {endu <-  strsplit(ID, "_") %>% sapply(., `[`, 2) } else {endu <- max(kor_sRNR[2, ], na.rm=TRUE)}
+    grandu <- strsplit(ID, "_") %>% sapply(., `[`, 3) 
+    gr <- makeGRangesFromDataFrame(data.frame(chr="NC_009004.1", start=stasu, end=endu, strand=grandu))    
+    return(gr)
+                                            } 
+  return(d)
+                            }
+
+samplesInfo <- fread("./input/sampleInfo.txt")
+samples2do <- samplesInfo$Sample
+pathGenome <- "NC_009004.fasta"
+N <- length(samples2do)
+pratempimas <- 50
+sRNR <- copy(gr)
+tvarkytinos <- sRNR[!grepl(paste(letters, collapse="|"), mcols(sRNR)$short_name, perl=TRUE ), ]
+neliesti <- sRNR[grepl(paste(letters, collapse="|"), mcols(sRNR)$short_name, perl=TRUE ), ]
+
+mcols(tvarkytinos) <- NULL
+tvarkytinos$ID <- paste(start(tvarkytinos), end(tvarkytinos), strand(tvarkytinos), sep="_")  
+## Adjust this 
+path2BAMS <- "LactissRNA/output/"
+rezu  <- correct_coord_by_row(tvarkytinos, dSam=samplesInfo, pratempimas=50) 
+
+gr_plius <- rezu[strand(rezu) == "+"]
+mcols(gr_plius)$short_name <- paste0(ceiling(start(gr_plius)/1000), ".", ((str_sub(as.character(start(gr_plius)), start= -3) %>% str_sub(., 1, 2)) %>% as.numeric()) %% 100  %>% sprintf("%02d", .), strand(gr_plius)) 
+gr_plius <- sort(gr_plius)
+mcols(gr_plius)$short_name <- change_names2shorter(mcols(gr_plius)$short_name) 
+mcols(gr_plius)$sarasas <- "Bendras"
+
+gr_minus <- rezu[strand(rezu) != "+"]
+mcols(gr_minus)$short_name <-  paste0(ceiling(start(gr_minus)/1000), ".", ((str_sub(as.character(start(gr_minus)), start= -3) %>% str_sub(., 1, 2)) %>% as.numeric()) %% 100  %>% sprintf("%02d", .), strand(gr_minus)) 
+gr_minus <- sort(gr_minus)
+mcols(gr_minus)$short_name <- change_names2shorter(mcols(gr_minus)$short_name)
+mcols(gr_minus)$sarasas <- "Bendras"
+gr <- c(gr_plius, gr_minus, neliesti) %>% sort
+
+mcols(gr)$source <- "rtracklayer"
+mcols(gr)$type <- "sRNA"
+mcols(gr)$score <- 50
+mcols(gr)$phase <- NA
+mcols(gr)$ID <- paste0(start(gr), "_", end(gr), "_", strand(gr))
+mcols(gr)$Name <- mcols(gr)$short_name
+mcols(gr)$locus_tag <- mcols(gr)$ID
+mcols(gr)$feature <- "sRNA"
+mcols(gr)$gene_biotype <- "sRNA"
+mcols(gr)$sarasas <- "Bendras"
+names(gr) <- mcols(gr)$ID
+
+saveRDS(gr, paste0(outdatadir, "all_sRNA.RDS"))
+export(gr, paste0(outdatadir, "all_sRNA.bed"))
+export(gr, paste0(outdatadir, "all_sRNA.gff3"))
+```

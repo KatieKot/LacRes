@@ -1,0 +1,117 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, stringr)
+dir.create(outdatadir, recursive = TRUE)
+options(scipen=999)
+```
+
+```{r}
+cpm_th <- 5
+samplesInfo <- fread("./input/sampleInfo.txt")
+
+cpmai <- readRDS(paste0("output/code/GetExpression/", "cpm_allLibs_edgeR_normalized.RDS")) %>% 
+  as.data.table(, keep.rownames=TRUE) %>% 
+  .[, ID := rn] %>% 
+  .[, rn := NULL] %>% 
+  .[!grepl("LLMG", ID), ] %>% 
+  setkey(., "ID") 
+
+pradzios <- readRDS(paste0("output/code/CorrectCoordinates_var2/", "PoslinkisPradzia.RDS")) %>% setkey(., "ID")
+pabaigos <- readRDS(paste0("output/code/CorrectCoordinates_var2/", "PoslinkisPabaiga.RDS")) %>% setkey(., "ID")
+
+sesios_lib <- as.data.table(cpmai)[, FivePoints_1 := NULL] 
+i_cpm <- rowSums(as.data.table(sesios_lib)[, ID := NULL]<cpm_th)
+
+i <- (i_cpm < 5) 
+# galutinis sRNR sarasas yra tos sRNR, kurios atitinka i kriteriju 
+sesios_sRNR <- import(paste0("output/code/FinalsRNRList/", "all_sRNA.gff3"))
+sesios_sRNR <- sesios_sRNR[mcols(sesios_sRNR)$locus_tag %in% cpmai$ID[i]]
+gr <- c(sesios_sRNR)
+mcols(gr)$score <- 50
+names(gr) <- mcols(gr)$ID
+export(gr, paste0(outdatadir, "sRNA.bed"))
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "sRNAs.fasta"), " -bed ",  paste0(outdatadir, "sRNA.bed"), " -name -s")
+system(cmd)
+```
+
+```{r}
+sRNR <- gr
+mcols(sRNR)$short_name <- NULL 
+mcols(sRNR)$sarasas <- NULL 
+
+kamienai <- fread("./input/Genomes_to_look.txt", header=FALSE)
+FASTA <- paste0("../", outdatadir, "sRNAs.fasta")
+
+cmd <- paste("./code/find_sim_Genomes.sh", "./input/Genomes_to_look.txt", FASTA, "NC_009004.fasta 2>logs.txt")
+if(!(file.exists(paste0(outdatadir, "Panasumai.csv")))) {
+  system(cmd, intern=FALSE)
+  cmd <- paste("mv ./DB/REZU.txt", paste0(outdatadir))
+  system(cmd, intern=FALSE)
+  cmd <- paste("Rscript ./code/make_table_Genomes.R", paste0(outdatadir, "REZU.txt"), paste0(outdatadir, "Panasumai.csv 2>>logs.txt") )
+  system(cmd, intern=FALSE)
+  }
+
+d <- fread(paste0(outdatadir, "Panasumai.csv")) %>% 
+  .[, V1 := gsub("__.*", "", V1)] %>% 
+  .[]
+
+saveRDS(d, paste0(outdatadir, "S9_panasumai.RDS"))
+```
+
+```{r}
+gr <- readRDS(paste0("output/code/FinalsRNRList/", "all_sRNA.RDS"))
+saveRDS(gr, paste0(outdatadir, "all_sRNA.RDS"))
+export(gr, paste0(outdatadir, "all_sRNA.bed"))
+export(gr, paste0(outdatadir, "all_sRNA.gff3"))
+```
+
+```{r}
+pradzios <- readRDS(paste0("output/code/CorrectCoordinates_var2/", "PoslinkisPradzia.RDS")) %>% 
+  setkey(., "ID") %>% 
+  .[, startPos_Lys_1 := as.numeric(startPos_Lys_1)] %>% 
+  .[, startPos_Lys_2 := as.numeric(startPos_Lys_2)] %>% 
+  .[, startPos_PnG_1 := as.numeric(startPos_PnG_1)] %>% 
+  .[, startPos_PnG_2 := as.numeric(startPos_PnG_2)] %>% 
+  .[, startPos_Control_1 := as.numeric(startPos_Control_1)] %>% 
+  .[, startPos_Control_2 := as.numeric(startPos_Control_2)] %>% 
+  .[, startPos_FivePoints_1 := as.numeric(startPos_FivePoints_1)] %>% 
+  .[]
+
+pabaigos <- readRDS(paste0("output/code/CorrectCoordinates_var2/", "PoslinkisPabaiga.RDS")) %>% 
+  setkey(., "ID") %>% 
+  .[, endPos_Lys_1 := as.numeric(endPos_Lys_1)] %>% 
+  .[, endPos_Lys_2 := as.numeric(endPos_Lys_2)] %>% 
+  .[, endPos_PnG_1 := as.numeric(endPos_PnG_1)] %>% 
+  .[, endPos_PnG_2 := as.numeric(endPos_PnG_2)] %>% 
+  .[, endPos_Control_1 := as.numeric(endPos_Control_1)] %>% 
+  .[, endPos_Control_2 := as.numeric(endPos_Control_2)] %>% 
+  .[, endPos_FivePoints_1 := as.numeric(endPos_FivePoints_1)] %>% 
+  .[]
+
+cpmai <- readRDS(paste0("output/code/GetExpression/", "cpm_allLibs_edgeR_normalized.RDS")) %>% 
+  as.data.table(, keep.rownames=TRUE) %>% 
+  .[, ID := rn] %>% 
+  .[, rn := NULL] %>% 
+  .[!grepl("LLMG", ID), ] %>% 
+  setkey(., "ID") 
+
+d <- foreach(i=samplesInfo$Sample, .combine="cbind") %do% {
+  poslinkiai <- merge(pradzios[, c("ID", colnames(pradzios)[grepl(i, colnames(pradzios))]), with=FALSE], 
+                      pabaigos[, c("ID", colnames(pabaigos)[grepl(i, colnames(pabaigos))]), with=FALSE]) 
+  neeg <- is.na(rowSums(poslinkiai[, -1]))
+  poslinkiai$egzistavimas <- "-"
+  poslinkiai$egzistavimas[!neeg] <- "+"
+  stiprumai <- cpmai[, c("ID", i), with=FALSE]
+  merge(poslinkiai, stiprumai, by="ID") %>% 
+    .[, meginys := "-"] %>% 
+    .[egzistavimas == "+" & i>cpm_th, meginys := "+"] %>% 
+    .[, .(ID, meginys)] %>% 
+    setnames("meginys", i) %>% 
+    setkey(., "ID") %>% 
+    .[, ID := NULL] %>% 
+    .[]
+} %>% cbind((pradzios[, ] %>% setkey(., "ID") %>% .[, ID]), .) %>% 
+  setnames("V1", "ID")
+
+saveRDS(d, paste0(outdatadir, "egzistavimas.RDS"))
+```

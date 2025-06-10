@@ -1,0 +1,37 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr)
+dir.create(outdatadir, recursive = TRUE)
+sRNR <- readRDS("./output/code/FinalTable/all_sRNA.RDS")
+```
+
+```{r}
+# surenkam lentele  
+promotoriai <- readRDS("./output/code/S4_Promoters/S4_promoters.RDS")
+terminatoriai <- readRDS("./output/code/S5_Terminators/S5_terminators.RDS")
+verified <- c("1181+", "2102+", "40+", "1971-", "1042+", "1018+", "127.5+", "840+")
+poslinkiaiPradzia <- readRDS("./output/code/CorrectCoordinates_var2/PoslinkisPradzia.RDS") 
+poslinkiaiPabaiga <- readRDS("./output/code/CorrectCoordinates_var2/PoslinkisPabaiga.RDS") 
+kontekstai <- readRDS("./output/code/DoClassifications/AroundContext.RDS") %>% as.data.table() %>% .[, .(ID, context)]
+rfam <- readRDS("./output/code/DoClassifications/rfam.RDS")
+egzistavimas <- readRDS("./output/code/FinalTable/egzistavimas.RDS")
+verified <- c("sLLM56+", "sLLM323+", "sLLM708-", "sLLM995+", "sLLM1042+", "sLLM1238+", "sLLM1276-", "sLLM1306-", 
+        "sLLM2000-", "sLLM2021-", "sLLM2064+", "sLLM1322.7a+", "sLLM2486-", "sLLM461+", "sLLM820+", "sLLM844+", 
+        "sLLM973+", "sLLM1620-", "sLLM2049-", "sLLM2268+")
+
+d <- as.data.table(sRNR) %>% 
+  .[, .(start, end, width, strand, ID, short_name)] %>% 
+  .[, promoter := "-"] %>% 
+  .[ID %in% promotoriai$ID, promoter := "+"] %>% 
+  .[, terminator := "-"] %>% 
+  .[ID %in% terminatoriai$ID, terminator := "+"] %>% 
+  merge(., kontekstai, all.x=TRUE) %>% 
+  merge(., rfam[, .(shortName, rfamID, LongName, sRNR)], by.x="ID", by.y="sRNR", all.x=TRUE) %>% 
+  merge(., egzistavimas, all=TRUE) %>% 
+  merge(., poslinkiaiPradzia, all.x=TRUE) %>% 
+  merge(., poslinkiaiPabaiga, all.x=TRUE) %>% 
+  .[, validation := "-"] %>% 
+  .[short_name %in% gsub("sLLM", "", verified), validation := "+"]
+
+saveRDS(d, paste0(outdatadir, "S2_table.RDS"))
+``` 

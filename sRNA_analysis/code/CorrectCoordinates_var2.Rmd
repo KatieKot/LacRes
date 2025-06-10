@@ -1,0 +1,143 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, readr, tximport, DESeq2, edgeR)
+dir.create(outdatadir, recursive = TRUE)
+## Adjust this
+path2BAMS <- "LactissRNA/output/"
+```
+
+```{r}
+fix_start <- function(coveragai, vidurys, th=3) {
+  for (i in vidurys:3) {
+    if (coveragai[i] < 5) {
+      rezu <- NA; 
+      break
+      } 
+    if ((coveragai[i]/coveragai[i-1] >= th)) {
+      rezu <- i
+      break
+    } else if (coveragai[i]/coveragai[i-2] >= th) {
+       rezu <- i-1
+       break
+    } else {rezu <- NA}
+  } 
+    if (i < 4) {rezu <- NA}
+  return(rezu) 
+}
+
+fix_end <- function(coveragai, vidurys, th=3) {
+  for (i in vidurys:((length(coveragai)-2))) {
+      if (coveragai[i] < 5) {
+        rezu <- NA; 
+        break
+        }
+      if (coveragai[i]/coveragai[i+1] >= th) {
+        rezu <- i
+        break
+      } else if ((coveragai[i]/coveragai[i+2] >= th)) {
+         rezu <- i + 1
+         break
+      } else {rezu <- NA}
+    }
+      if (i < 4) {rezu <- NA}
+    return(rezu) 
+}
+
+correct_coord_by_row <- function(RNR, vardas, pratempimas=100, dSam=samplesInfo) {
+  d <- foreach(i=1:length(RNR), .combine="rbind") %do% {
+    kor_sRNR <- foreach (j=1: nrow(dSam), .combine="cbind") %do% {
+      meginys <- dSam[j, Sample]
+      ext_sRNR <- RNR[i] + pratempimas
+      if (strand(ext_sRNR)@values == "+") {  
+        bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_99.bam")
+        dlist <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE) %>% 
+          as.list() %>% unlist
+        ilgiai <- length(dlist)
+        rezu <- c(start(ext_sRNR) +  fix_start(dlist, ilgiai%/%2) - 1 , 
+              start(ext_sRNR) + fix_end(dlist, ilgiai%/%2) -1,
+              as.character(mcols(ext_sRNR)$ID))
+        if(is.na(rezu[1]) | is.na(rezu[2])) {
+            rezu[1] <- NA
+            rezu[2] <- NA} 
+                                          } else {
+        bampath <- paste0(path2BAMS, meginys, "/dedSorted_", meginys, "_noHils_83.bam")
+        dlist <- bamsignals::bamCoverage(bampath, ext_sRNR, verbose=FALSE) %>% 
+          as.list() %>% unlist
+        ilgiai <- length(dlist)                                            
+        rezu <- c(start(ext_sRNR) + fix_start(rev(dlist), ilgiai%/%2) -1, 
+              start(ext_sRNR) + fix_end(rev(dlist), ilgiai%/%2) - 1, 
+              as.character(mcols(ext_sRNR)$ID) 
+                 )  
+        if(is.na(rezu[1]) | is.na(rezu[2])) {
+            rezu[1] <- NA
+            rezu[2] <- NA} 
+                                                }
+      return(rezu)
+                                                          } 
+
+    colnames(kor_sRNR) <- dSam$Sample
+    ID <- kor_sRNR[3, ] %>% unique
+    kor_sRNR <- data.frame(kor_sRNR)[-3, ] %>% as.data.table 
+    kor_sRNR <- kor_sRNR[, lapply(.SD, as.numeric)]
+    real_start <- min(kor_sRNR[1, ], na.rm=TRUE)
+    real_end <- max(kor_sRNR[2, ], na.rm=TRUE)          
+    start_pos <- (real_start-kor_sRNR[1, ]) %>% unlist
+    names(start_pos) <- paste0("startPos_", names(start_pos))
+    end_pos <- (kor_sRNR[2, ] - real_end) %>% unlist
+    names(end_pos) <- paste0("endPos_", names(end_pos))
+    pradziaKor <- unlist(kor_sRNR[1, ])
+    names(pradziaKor) <- paste0("start_", names(pradziaKor))
+    endKor <- unlist(kor_sRNR[2, ]) 
+    names(endKor) <- paste0("end_", names(endKor))
+    return(c(ID=ID, START=real_start, END=real_end, pradziaKor, endKor, start_pos, end_pos))
+                                            } 
+  return(d)
+                            }
+
+ismesk_NA <- function(x) {x[!(grep("NA", x$ID)), ]}
+```
+
+```{r}
+#general stuff
+samplesInfo <- fread("./input/sampleInfo.txt")
+samples2do <- samplesInfo$Sample
+
+pathGenome <- "NC_009004.fasta"
+N <- length(samples2do)
+pratempimas <- 50
+```
+
+# Pakoreguojam pagrindini sarasa 
+
+```{r}
+sRNR <- readRDS(paste0("output/code/FinalsRNRList/all_sRNA.RDS"))
+sRNR$score <- NULL
+sRNR$ID <- sRNR$name
+```
+
+```{r}
+vardas <- "Final_202405"
+mcols(sRNR) <- NULL
+sRNR$ID <- paste(start(sRNR), end(sRNR), strand(sRNR), sep="_")  
+
+rezu  <- correct_coord_by_row(sRNR, vardas, dSam=samplesInfo, pratempimas=50) %>% as.data.frame 
+setDT(rezu)
+vardai <- samplesInfo$Sample
+
+make_names <- function(x) {
+  unlist(paste0(c("start_", "end_", "startPos_", "endPos_"), x)) %>% as.vector()
+}
+nVardai <- as.vector(sapply(vardai, make_names)) %>% gsub("-", ".", .)
+rezu <- rezu[, c("ID", "START", "END", nVardai), with=FALSE] %>% 
+  .[, ID2 := paste(START, END, (strsplit(ID, "_") %>% sapply(., `[`, 3) %>% as.character()), sep="_")] %>% 
+  .[, START := as.numeric(START) - 1] 
+  
+sesiu <- rezu[, c("ID", colnames(rezu)[grepl("Pos", colnames(rezu))]), with=FALSE]
+
+pradzios <- sesiu[, c("ID", colnames(sesiu)[grepl("start", colnames(sesiu))]), with=FALSE]
+pabaigos <- sesiu[, c("ID", colnames(sesiu)[grepl("end", colnames(sesiu))]), with=FALSE]
+
+saveRDS(pradzios, paste0(outdatadir, "PoslinkisPradzia.RDS"))
+saveRDS(pabaigos, paste0(outdatadir, "PoslinkisPabaiga.RDS"))
+```
+

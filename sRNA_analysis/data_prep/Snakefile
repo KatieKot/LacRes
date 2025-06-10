@@ -1,0 +1,311 @@
+##########################################################################################
+# Change default parameters below before kickstarting analysis using "snakemake"
+INPUT_DIRECTORY = "input/"
+EXPERIMENT_NAME = "Lactis_sRNA_2016"
+SNAKE_DIRECTORY = workflow.basedir
+GENOME = "NC_009004.fasta"
+GFF = "NC_009004_with_sRNA.gff"
+workdir: "LactissRNA"
+
+####################################################################################################
+# SAMPLES
+
+# Get samples from input directory
+import os
+SAMPLES = os.listdir(INPUT_DIRECTORY)
+print(SAMPLES)
+print(SNAKE_DIRECTORY)
+
+rule all:
+    input:
+        expand("output/{sample}/gr_99_{sample}.bedgraph", sample=SAMPLES),
+        expand("output/{sample}/gr_83_{sample}.bedgraph", sample=SAMPLES),
+        expand("output/{sample}/dedSorted_{sample}.bam", sample=SAMPLES),
+        expand("output/{sample}/00_{sample}_R2_fastqc.html", sample=SAMPLES),
+        expand("output/{sample}/03_{sample}_R2_fastqc.html", sample=SAMPLES),
+        expand("output/{sample}/dedSorted_{sample}_noHils_99.bam", sample=SAMPLES),
+        expand("output/{sample}/dedSorted_{sample}_noHils_83.bam", sample=SAMPLES),
+        expand("output/{sample}/dedSorted_{sample}_plius.bedgraph", sample=SAMPLES),
+        expand("output/{sample}/dedSorted_{sample}_minus.bedgraph", sample=SAMPLES),
+        "output/counts_RNA.txt",
+        "output/counts.txt"
+
+rule merge_copy_fastq:
+    input:
+        INPUT_DIRECTORY = expand('{INPUT_DIRECTORY}', INPUT_DIRECTORY = INPUT_DIRECTORY),
+    output:
+        R1 = temp("output/{sample}/00_{sample}_R1.fastq.gz"),
+        R2 = temp("output/{sample}/00_{sample}_R2.fastq.gz")
+    threads: 2       
+    shell:
+        """
+        cat {input.INPUT_DIRECTORY}/{wildcards.sample}/*_R1_001.fastq.gz > {output.R1}
+        cat {input.INPUT_DIRECTORY}/{wildcards.sample}/*_R2_001.fastq.gz > {output.R2}
+        """
+
+rule umi_extract:
+    input:
+        R1 = "output/{sample}/00_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/00_{sample}_R2.fastq.gz"
+    output:
+        R1 = temp("output/{sample}/01_{sample}_R1.fastq.gz"),
+        R2 = temp("output/{sample}/01_{sample}_R2.fastq.gz")
+    log:
+        "logs/{sample}_umi_extract.log"
+    threads: 2
+    shell:
+        """
+        umi_tools extract -I {input.R1} --read2-in={input.R2} --bc-pattern=NNNN --bc-pattern2=XNNN -S {output.R1} --read2-out={output.R2} -L {log}
+        """
+
+rule move1N:
+    input:
+        R2 = "output/{sample}/01_{sample}_R2.fastq.gz"        
+    output:
+        R2 = temp("output/{sample}/02_{sample}_R2.fastq.gz")
+    threads: 5
+    shell:
+        """
+        cutadapt -u 1 -m 0 -o {output.R2} {input.R2} -j {threads}
+        """
+
+rule seqpurge:
+    input:
+        R1 = "output/{sample}/01_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/02_{sample}_R2.fastq.gz"
+    output:
+        R1 = temp("output/{sample}/03_{sample}_R1.fastq.gz"),
+        R2 = temp("output/{sample}/03_{sample}_R2.fastq.gz")
+    log: 
+      "logs/{sample}_seqpurge.log"
+    threads: 6
+    shell:
+        """
+        SeqPurge -min_len 24 -threads {threads} -a1 NNNNTGGAATTCTCGGGTGCCAAG -a2 NNNNGATCGTCGGACTGTAGAACT -qcut 20 -summary {log} -in1 {input.R1} -in2 {input.R2} -out1 {output.R1} -out2 {output.R2}
+        """
+
+rule map_data_hisat2:
+    input:
+        R1 = "output/{sample}/03_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/03_{sample}_R2.fastq.gz"
+    output:
+        BAM = "output/{sample}/{sample}.bam"
+        #BAI = "output/{sample}/{sample}.bam.bai"
+    log: "logs/{sample}/hisat2.log"        
+    threads: 10
+    shell:
+        """
+        hisat2 -p {threads} -k 15 --no-unal --no-spliced-alignment -X 500 --no-mixed --no-discordant --new-summary --summary-file {log} -x {GENOME} -1 {input.R1} -2 {input.R2} -S output/{wildcards.sample}/hisat2.sam
+        samtools sort -@ {threads} -n  output/{wildcards.sample}/hisat2.sam -o {output.BAM}
+        rm output/{wildcards.sample}/hisat2.sam
+        """        
+
+
+rule move_left:
+    input:
+        BAM = "output/{sample}/{sample}.bam",
+    output:
+        BAM = "output/{sample}/selectedMoved.bam",       
+        BAI = "output/{sample}/selectedMoved.bam.bai"
+    threads: 1
+    resources:
+        mem_gb=50
+    shell:
+        """
+        samtools view -H {input.BAM} > output/{wildcards.sample}/{wildcards.sample}_header.txt
+        samtools view {input.BAM} | perl /scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/moveLeft.pl | cat output/{wildcards.sample}/{wildcards.sample}_header.txt - | samtools view -@ {threads} -bS | samtools sort -@ {threads} -o {output.BAM}
+        rm output/{wildcards.sample}/{wildcards.sample}_header.txt
+        samtools index {output.BAM} 
+        """
+
+rule dedup_data:
+    input:
+        BAM = "output/{sample}/selectedMoved.bam",
+        BAI = "output/{sample}/selectedMoved.bam.bai"
+    output:
+        BAM = temp("output/{sample}/dedup_{sample}.bam")
+    log: 
+        "logs/{sample}/dedup.log" 
+    threads: 10
+    resources:
+        mem_gb=50
+    shell:
+        """
+        umi_tools dedup --method=unique -I {input.BAM} --log={log}  output/{wildcards.sample}_header.txt --paired --output-stats=output/{wildcards.sample}/dedup -S {output}
+        """
+
+rule remap:
+    input: 
+        BAM = "output/{sample}/dedup_{sample}.bam",
+        R1 = "output/{sample}/03_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/03_{sample}_R2.fastq.gz"
+    output: 
+        R1 = temp("output/{sample}/newR1.fq.gz"),
+        R2 = temp("output/{sample}/newR2.fq.gz"),
+        BAM = "output/{sample}/dedSorted_{sample}.bam"
+    threads: 10
+    log: "logs/{sample}/hisat2_remap.log" 
+    resources:
+        mem_gb=50
+    shell: 
+        """
+        samtools view {input.BAM} | awk '{{print $1}}' | sort | uniq > output/{wildcards.sample}/ID2get
+        seqkit grep -f output/{wildcards.sample}/ID2get {input.R1} -o {output.R1}
+        seqkit grep -f output/{wildcards.sample}/ID2get {input.R2} -o {output.R2}
+        /mnt/store/DMTS/common_programs/hisat2-2.2.1/hisat2 -p {threads} -k 15 -X 500 --no-unal --no-mixed --no-discordant --no-spliced-alignment --new-summary --summary-file {log} -x {GENOME} -1 {output.R1} -2 {output.R2} -S output/{wildcards.sample}/hisat2.sam
+        samtools view -bS -@ {threads} output/{wildcards.sample}/hisat2.sam | samtools sort -@ {threads} -o {output.BAM}
+        rm output/{wildcards.sample}/hisat2.sam
+        rm output/{wildcards.sample}/ID2get
+        samtools index {output.BAM} 
+        """
+
+rule do_fastqc:
+    input:
+        R1 = "output/{sample}/00_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/00_{sample}_R2.fastq.gz",
+        R3 = "output/{sample}/03_{sample}_R1.fastq.gz",
+        R4 = "output/{sample}/03_{sample}_R2.fastq.gz"
+    output:
+        OUT1 = "output/{sample}/00_{sample}_R2_fastqc.html",
+        OUT2 = "output/{sample}/03_{sample}_R2_fastqc.html"
+    threads: 4
+    shell:
+        """
+        fastqc -t {threads} --nogroup  {input.R1} {input.R2} {input.R3} {input.R4}
+        """
+
+rule extend_reads: 
+    input: "output/{sample}/dedSorted_{sample}.bam"
+    output:
+        gr99 =  "output/{sample}/gr_99_{sample}.bedgraph",
+        gr83 =  "output/{sample}/gr_83_{sample}.bedgraph"
+    threads: 6
+    resources: 
+        mem_gb=10
+    shell:
+        """ 
+        samtools view -h {input} | awk '{{if ($1 ~ "^@" || $2 == 99 || $2 == 147 || $2 == 355 || $2 == 403 ) {{print $0}}  }}' | samtools view -@ 6 -bS | samtools sort -@ 6 -n -o output/{wildcards.sample}/gr99.bam
+        samtools view -h {input} | awk '{{if ($1 ~ "^@" || $2 == 83 || $2 == 163 || $2 == 419 || $2 == 339 ) {{print $0}} }}' | samtools view -@ 6 -bS | samtools sort -@ 6 -n -o output/{wildcards.sample}/gr83.bam
+        bedtools bamtobed -bedpe -i output/{wildcards.sample}/gr99.bam > output/{wildcards.sample}/gr99.bampe   
+        bedtools bamtobed -bedpe -i output/{wildcards.sample}/gr83.bam > output/{wildcards.sample}/gr83.bampe   
+        awk '$1==$4 && $6-$2 < 1000 {{print $0}}' output/{wildcards.sample}/gr99.bampe | cut -f 1,2,6 | sort -k1,1 -k2,2n -k3,3n > output/{wildcards.sample}/gr99.bedpe
+        awk '$1==$4 && $6-$2 < 1000 {{print $0}}' output/{wildcards.sample}/gr83.bampe | cut -f 1,2,6 | sort -k1,1 -k2,2n -k3,3n > output/{wildcards.sample}/gr83.bedpe
+        bedtools genomecov -bga -split -i output/{wildcards.sample}/gr99.bedpe -g /mnt/store/annotations/NC_009004/NC_009004.fasta.fai > {output.gr99}
+        bedtools genomecov -bga -split -i output/{wildcards.sample}/gr83.bedpe -g /mnt/store/annotations/NC_009004/NC_009004.fasta.fai > {output.gr83}
+        rm output/{wildcards.sample}/gr99.bam output/{wildcards.sample}/gr83.bam output/{wildcards.sample}/gr99.bampe output/{wildcards.sample}/gr83.bampe output/{wildcards.sample}/gr99.bedpe output/{wildcards.sample}/gr83.bedpe
+        """ 
+
+
+rule split_strands: 
+    input:
+        BAM = "output/{sample}/dedSorted_{sample}.bam"
+    output:
+        BAM_83 = "output/{sample}/dedSorted_{sample}_83.bam",
+        BAM_99 = "output/{sample}/dedSorted_{sample}_99.bam",
+    threads: 6
+    resources:
+        mem_gb=20
+    shell: 
+        """
+        samtools view -h -@ {threads} {input.BAM} | awk 'substr($0, 1, 1) == "@" || $2 == 99 || $2 == 97 || $2 == 355 || $2 == 147 || $2 == 145 || $2 == 403  {{print $0}}' | samtools view -@ {threads} -bS - | samtools sort -@ {threads} - > {output.BAM_99}
+        samtools index {output.BAM_99}
+
+        samtools view -h -@ {threads} {input.BAM} | awk 'substr($0, 1, 1) == "@" || $2 == 83 || $2 == 163 || $2 == 161 || $2 == 419 || $2 == 81 || $2 == 339 {{print $0}}' | samtools view -@ {threads} -bS - | samtools sort -@ {threads} - > {output.BAM_83}
+        samtools index {output.BAM_83}
+        """
+
+rule noHils_reads_83:
+    input:
+        BAM = "output/{sample}/dedSorted_{sample}_83.bam"
+    output:
+        BAM = "output/{sample}/dedSorted_{sample}_noHils_83.bam"
+    threads: 16
+    resources:
+        mem_gb=10
+    shell:
+        """
+        samtools sort -n -@ {threads} {input.BAM} > output/{wildcards.sample}/single.bam
+        samtools view -H {input.BAM} > output/{wildcards.sample}/header.txt
+        samtools view {input.BAM} | sort -k1,1 -k4,4n  > output/{wildcards.sample}/sam.sam
+        cat output/{wildcards.sample}/header.txt output/{wildcards.sample}/sam.sam| samtools view -bS - -o output/{wildcards.sample}/single.bam
+        #BAM to BEDPER
+        bedtools bamtobed -bedpe -i output/{wildcards.sample}/single.bam > output/{wildcards.sample}/sorted.bedpe
+        #BEDPE to BED6
+        cat output/{wildcards.sample}/sorted.bedpe | awk '{{print $1" "$2" "$6" "$7" "$8" "$9}}' | tr ' ' '\\t' > output/{wildcards.sample}/sorted.bed
+        #BEDtoBAM, #sort and index bam
+        bedtools bedtobam -i output/{wildcards.sample}/sorted.bed -g /mnt/store/annotations/NC_009004/NC_009004.genome | samtools sort -@ {threads} | samtools view -h - | sed 's|AS:./input/NC_009004.genome\t||g' | sed 's|LN:0|LN:2529478|g' | samtools view -bS - > {output.BAM}
+        samtools index {output.BAM}
+        rm output/{wildcards.sample}/single.bam output/{wildcards.sample}/sorted.bed output/{wildcards.sample}/sorted.bedpe output/{wildcards.sample}/header.txt output/{wildcards.sample}/sam.sam
+        """
+
+rule noHils_reads_99:
+    input:
+        BAM = "output/{sample}/dedSorted_{sample}_99.bam"
+    output:
+        BAM = "output/{sample}/dedSorted_{sample}_noHils_99.bam"
+    threads: 16
+    resources:
+        mem_gb=10
+    shell:
+        """
+        samtools sort -n -@ {threads} {input.BAM} > output/{wildcards.sample}/single.bam
+        samtools view -H {input.BAM} > output/{wildcards.sample}/header.txt
+        samtools view {input.BAM} | sort -k1,1 -k4,4n  > output/{wildcards.sample}/sam.sam
+        cat output/{wildcards.sample}/header.txt output/{wildcards.sample}/sam.sam| samtools view -bS - -o output/{wildcards.sample}/single.bam
+        #BAM to BEDPER
+        bedtools bamtobed -bedpe -i output/{wildcards.sample}/single.bam > output/{wildcards.sample}/sorted.bedpe
+        #BEDPE to BED6
+        cat output/{wildcards.sample}/sorted.bedpe | awk '{{print $1" "$2" "$6" "$7" "$8" "$9}}' | tr ' ' '\\t' > output/{wildcards.sample}/sorted.bed
+        #BEDtoBAM, #sort and index bam
+        bedtools bedtobam -i output/{wildcards.sample}/sorted.bed -g /mnt/store/annotations/NC_009004/NC_009004.genome | samtools sort -@ {threads} | samtools view -h - | sed 's|AS:./input/NC_009004.genome\t||g' | sed 's|LN:0|LN:2529478|g' | samtools view -bS - > {output.BAM}
+        samtools index {output.BAM}
+        rm output/{wildcards.sample}/single.bam output/{wildcards.sample}/sorted.bed output/{wildcards.sample}/sorted.bedpe output/{wildcards.sample}/header.txt output/{wildcards.sample}/sam.sam
+        """
+
+rule dedup_normal:
+    input:
+        BAM = "output/{sample}/{sample}.bam"
+    output:
+        BAM = "output/{sample}/Norm_dedup_{sample}.bam"
+    log: 
+        "logs/{sample}/Norm_dedup.log" 
+    threads: 10
+    resources:
+        mem_gb=50
+    shell:
+        """
+        samtools sort -@ {threads} {input.BAM} > output/{wildcards.sample}/sorted.bam
+        samtools index output/{wildcards.sample}/sorted.bam
+        umi_tools dedup --method=unique -I output/{wildcards.sample}/sorted.bam --log={log}  output/{wildcards.sample}_Norm_header.txt --paired --output-stats=output/{wildcards.sample}/Norm_dedup -S {output}
+        rm output/{wildcards.sample}/sorted.bam
+        rm output/{wildcards.sample}/sorted.bam.bai
+        """
+
+rule quantify: 
+    input:
+        BAM = expand("output/{sample}/Norm_dedup_{sample}.bam", sample=SAMPLES)
+    output: 
+      ALL = "output/counts.txt",
+      RNR = "output/counts_RNA.txt",
+    log: "logs/featureCounts.log"
+    threads: 10
+    resources:
+        mem_gb=50
+    shell:
+        """
+        featureCounts -t mRNA,gene -g ID -F GTF -M -O --fraction -s 1 -p --countReadPairs -T {threads} -a {GFF} -o {output.ALL} {input}
+        featureCounts -t mRNA -g ID -F GTF -M -O --fraction -s 1 -p --countReadPairs -T {threads} -a {GFF} -o {output.RNR} {input}
+        """
+
+rule do_bedgraph:
+    input:
+        BAM = "output/{sample}/dedSorted_{sample}.bam"
+    output:
+        BGP = "output/{sample}/dedSorted_{sample}_plius.bedgraph",
+        BGM = "output/{sample}/dedSorted_{sample}_minus.bedgraph"
+    threads: 1
+    shell:
+        """
+        bedtools genomecov -ibam {input.BAM} -bg -pc -strand +  > {output.BGP}
+        bedtools genomecov -ibam {input.BAM} -bg -pc -strand -  > {output.BGM}
+        """

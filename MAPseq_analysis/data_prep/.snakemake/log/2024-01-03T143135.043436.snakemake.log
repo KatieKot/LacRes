@@ -1,0 +1,135 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 36
+Rules claiming more threads will be scaled down.
+Job stats:
+job                        count    min threads    max threads
+-----------------------  -------  -------------  -------------
+all                            1              1              1
+make_deep_bins_notDedup        1             30             30
+map_data_hisat2                6             20             20
+total                          8              1             30
+
+Select jobs to execute...
+
+[Wed Jan  3 14:31:35 2024]
+rule map_data_hisat2:
+    input: output/Control_R2/01_Control_R2_val_1.fq.gz, output/Control_R2/01_Control_R2_val_2.fq.gz
+    output: output/Control_R2/Control_R2.bam, output/Control_R2/Control_R2.bam.bai
+    log: logs/Control_R2/hisat2.log
+    jobid: 4
+    reason: Missing output files: output/Control_R2/Control_R2.bam
+    wildcards: sample=Control_R2
+    threads: 20
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:35:04 2024]
+Finished job 4.
+1 of 8 steps (12%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:35:04 2024]
+rule map_data_hisat2:
+    input: output/Sample_R2/01_Sample_R2_val_1.fq.gz, output/Sample_R2/01_Sample_R2_val_2.fq.gz
+    output: output/Sample_R2/Sample_R2.bam, output/Sample_R2/Sample_R2.bam.bai
+    log: logs/Sample_R2/hisat2.log
+    jobid: 13
+    reason: Missing output files: output/Sample_R2/Sample_R2.bam
+    wildcards: sample=Sample_R2
+    threads: 20
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:37:43 2024]
+Finished job 13.
+2 of 8 steps (25%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:37:43 2024]
+rule map_data_hisat2:
+    input: output/Control_R3/01_Control_R3_val_1.fq.gz, output/Control_R3/01_Control_R3_val_2.fq.gz
+    output: output/Control_R3/Control_R3.bam, output/Control_R3/Control_R3.bam.bai
+    log: logs/Control_R3/hisat2.log
+    jobid: 7
+    reason: Missing output files: output/Control_R3/Control_R3.bam
+    wildcards: sample=Control_R3
+    threads: 20
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:41:56 2024]
+Finished job 7.
+3 of 8 steps (38%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:41:56 2024]
+rule map_data_hisat2:
+    input: output/Sample_R1/01_Sample_R1_val_1.fq.gz, output/Sample_R1/01_Sample_R1_val_2.fq.gz
+    output: output/Sample_R1/Sample_R1.bam, output/Sample_R1/Sample_R1.bam.bai
+    log: logs/Sample_R1/hisat2.log
+    jobid: 10
+    reason: Missing output files: output/Sample_R1/Sample_R1.bam
+    wildcards: sample=Sample_R1
+    threads: 20
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:44:36 2024]
+Finished job 10.
+4 of 8 steps (50%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:44:36 2024]
+rule map_data_hisat2:
+    input: output/Sample_R3/01_Sample_R3_val_1.fq.gz, output/Sample_R3/01_Sample_R3_val_2.fq.gz
+    output: output/Sample_R3/Sample_R3.bam, output/Sample_R3/Sample_R3.bam.bai
+    log: logs/Sample_R3/hisat2.log
+    jobid: 16
+    reason: Missing output files: output/Sample_R3/Sample_R3.bam
+    wildcards: sample=Sample_R3
+    threads: 20
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:47:20 2024]
+Finished job 16.
+5 of 8 steps (62%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:47:20 2024]
+rule map_data_hisat2:
+    input: output/Control_R1/01_Control_R1_val_1.fq.gz, output/Control_R1/01_Control_R1_val_2.fq.gz
+    output: output/Control_R1/Control_R1.bam, output/Control_R1/Control_R1.bam.bai
+    log: logs/Control_R1/hisat2.log
+    jobid: 1
+    reason: Missing output files: output/Control_R1/Control_R1.bam
+    wildcards: sample=Control_R1
+    threads: 20
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:49:49 2024]
+Finished job 1.
+6 of 8 steps (75%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:49:49 2024]
+rule make_deep_bins_notDedup:
+    input: output/Control_R1/Control_R1.bam, output/Control_R2/Control_R2.bam, output/Control_R3/Control_R3.bam, output/Sample_R1/Sample_R1.bam, output/Sample_R2/Sample_R2.bam, output/Sample_R3/Sample_R3.bam
+    output: output/mapped.npz, output/mapped_counts.tsv
+    jobid: 19
+    reason: Missing output files: output/mapped_counts.tsv; Input files updated by another job: output/Sample_R1/Sample_R1.bam, output/Sample_R2/Sample_R2.bam, output/Control_R3/Control_R3.bam, output/Control_R1/Control_R1.bam, output/Sample_R3/Sample_R3.bam, output/Control_R2/Control_R2.bam
+    threads: 30
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:51:54 2024]
+Finished job 19.
+7 of 8 steps (88%) done
+Select jobs to execute...
+
+[Wed Jan  3 14:51:54 2024]
+localrule all:
+    input: output/Control_R1/Control_R1.bam, output/Control_R2/Control_R2.bam, output/Control_R3/Control_R3.bam, output/Sample_R1/Sample_R1.bam, output/Sample_R2/Sample_R2.bam, output/Sample_R3/Sample_R3.bam, output/mapped_counts.tsv
+    jobid: 0
+    reason: Input files updated by another job: output/Sample_R2/Sample_R2.bam, output/Control_R3/Control_R3.bam, output/Control_R2/Control_R2.bam, output/Sample_R1/Sample_R1.bam, output/mapped_counts.tsv, output/Control_R1/Control_R1.bam, output/Sample_R3/Sample_R3.bam
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 14:51:54 2024]
+Finished job 0.
+8 of 8 steps (100%) done
+Complete log: ../../../../../scratch/kotryna/Giedrius/2024_GRIL/data_prep/.snakemake/log/2024-01-03T143135.043436.snakemake.log

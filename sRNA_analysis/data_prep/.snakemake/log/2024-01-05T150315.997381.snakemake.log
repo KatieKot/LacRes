@@ -1,0 +1,37 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 10
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count    min threads    max threads
+---------------  -------  -------------  -------------
+all                    1              1              1
+dedup_data             7             10             10
+extend_reads           7              6              6
+map_data_hisat2        7             10             10
+move_left              7              1              1
+remap                  7             10             10
+total                 36              1             10
+
+Select jobs to execute...
+
+[Fri Jan  5 15:03:16 2024]
+rule map_data_hisat2:
+    input: output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/FivePoints_1.bam, output/FivePoints_1/FivePoints_1.bam.bai
+    log: logs/FivePoints_1/hisat2.log
+    jobid: 59
+    reason: Missing output files: output/FivePoints_1/FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule map_data_hisat2 in file /scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/Snakefile, line 81:
+Job 59  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/FivePoints_1/FivePoints_1.bam.bai
+Removing output files of failed job map_data_hisat2 since they might be corrupted:
+output/FivePoints_1/FivePoints_1.bam
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: ../../../../../scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/.snakemake/log/2024-01-05T150315.997381.snakemake.log

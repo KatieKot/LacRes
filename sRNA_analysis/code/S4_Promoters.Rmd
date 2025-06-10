@@ -1,0 +1,146 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr)
+dir.create(outdatadir, recursive = TRUE)
+```
+
+```{r}
+gr <- readRDS("./output/code/FinalTable/all_sRNA.RDS") 
+mcols(gr)$short_name <- NULL 
+mcols(gr)$sarasas <- NULL 
+promotoriai_p <- fread(cmd=paste0("cat ./input/bprom_promotoriai.txt | sed 's/  */ /g' | paste - - -" ), header=FALSE) %>% 
+  .[, ref := strsplit(V1, " ") %>% sapply(., `[`, 1) %>% as.character()] %>% 
+  .[, ref_start := strsplit(ref, "-") %>% sapply(., `[`, 1) %>%  gsub("NC_009004.1:", "", .) %>% as.numeric()] %>% 
+  .[, ref_end := strsplit(ref, "-") %>% sapply(., `[`, 2) %>%  gsub(".fasta", "", .) %>% gsub(":", "", .) %>% as.numeric()] %>% 
+  .[, promStart := strsplit(V1, " ") %>% sapply(., `[`, 4) %>% as.numeric()] %>% 
+  .[, promStart := promStart + ref_start] %>% 
+  .[, LDF := strsplit(V1, " ") %>% sapply(., `[`, 6) ] %>%  
+  .[, start_box10 :=  ref_start + (strsplit(V2, " ") %>% sapply(., `[`, 6) %>% as.numeric())] %>% 
+  .[, box_10_seq :=  strsplit(V2, " ") %>% sapply(., `[`, 7) %>% as.character] %>% 
+  .[, box_10_score :=  strsplit(V2, " ") %>% sapply(., `[`, 9) %>% as.numeric()] %>% 
+  .[, start_box_35 :=  ref_start + (strsplit(V3, " ") %>% sapply(., `[`, 6) %>% as.numeric())] %>% 
+  .[, box_35_seq :=  strsplit(V3, " ") %>% sapply(., `[`, 7) %>% as.character] %>% 
+  .[, box_35_score :=  strsplit(V3, " ") %>% sapply(., `[`, 9) ] %>% 
+  .[, strand := "+"] %>% 
+  .[, V1 := NULL] %>% 
+  .[, V2 := NULL] %>% 
+  .[, V3 := NULL] %>% 
+  .[, ref := NULL] %>% 
+  .[, ref_start := NULL] %>% 
+  .[, ref_end := NULL] %>% 
+  .[]
+
+promotoriai_n <- fread(cmd=paste0("cat ./input/bprom_promotoriai_rev.txt | sed 's/  */ /g' | paste - - -" ), header=FALSE) %>% 
+  .[, ref := strsplit(V1, " ") %>% sapply(., `[`, 1) %>% as.character()] %>% 
+  .[, ref_start := strsplit(ref, "-") %>% sapply(., `[`, 1) %>%  gsub("NC_009004.1:", "", .) %>% as.numeric()] %>% 
+  .[, ref_end := strsplit(ref, "-") %>% sapply(., `[`, 2) %>%  gsub(".fasta", "", .) %>% gsub(":", "", .) %>% as.numeric()] %>% 
+  .[, promStart := strsplit(V1, " ") %>% sapply(., `[`, 4) %>% as.numeric()] %>% 
+  .[, promStart := ref_end - promStart] %>% 
+  .[, LDF := strsplit(V1, " ") %>% sapply(., `[`, 6) ] %>%  
+  .[, start_box10 :=  ref_end - (strsplit(V2, " ") %>% sapply(., `[`, 6) %>% as.numeric())] %>% 
+  .[, box_10_seq :=  strsplit(V2, " ") %>% sapply(., `[`, 7) %>% as.character] %>% 
+  .[, box_10_score :=  strsplit(V2, " ") %>% sapply(., `[`, 9) %>% as.numeric()] %>% 
+  .[, start_box_35 :=  ref_end + 1 - (strsplit(V3, " ") %>% sapply(., `[`, 6) %>% as.numeric())] %>% 
+  .[, box_35_seq :=  strsplit(V3, " ") %>% sapply(., `[`, 7) %>% as.character] %>% 
+  .[, box_35_score :=  strsplit(V3, " ") %>% sapply(., `[`, 9) ] %>% 
+  .[, strand := "-"] %>% 
+  .[, V1 := NULL] %>% 
+  .[, V2 := NULL] %>% 
+  .[, V3 := NULL] %>% 
+  .[, ref := NULL] %>% 
+  .[, ref_start := NULL] %>% 
+  .[, ref_end := NULL] %>% 
+  .[]
+
+promotoriai_gr <- rbind(promotoriai_p, promotoriai_n) %>% 
+  .[strand == "+", start := start_box_35] %>% 
+  .[strand == "+", end := start_box10+nchar(box_10_seq)-1] %>% 
+  .[strand == "-", start := start_box10-nchar(box_10_seq)+2] %>% 
+  .[strand == "-", end := start_box_35] %>% 
+  .[, chr := "NC_009004.1"] %>% 
+  .[, source := "bprom"] %>% 
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+
+promotech <- fread("./input/promotech_genome_predictions.csv") %>% 
+  .[strand == "+", start := start + 1] %>% 
+  .[strand == "+", end := end + 1] %>% 
+  .[strand == "-", end := end + 1] %>% 
+  .[strand == "-", start := start + 1] %>% 
+  .[, source := "promotech"] %>% 
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+
+promotoriai_gr <- c(promotoriai_gr, promotech)
+mcols(promotoriai_gr)$score[is.na(mcols(promotoriai_gr)$score)] <- 1
+export(promotoriai_gr, paste0(outdatadir, "promotoriai.bed"))
+
+#export(promotoriai_gr, paste0(outdatadir, "promotoriai_bprom.bed"))
+#export(promotech, paste0(outdatadir, "promotoriai_promotech.bed"))
+
+gr_pliusai <- gr[strand(gr) == "+", ]
+gr_minusai <- gr[strand(gr) == "-", ]
+
+pr2do <- promotoriai_gr[mcols(promotoriai_gr)$source == "bprom"]
+ov <- findOverlaps(resize(gr_pliusai, 1) %>% resize(., 1, fix="start") %>% resize(., 20, fix="end"), resize(pr2do, 1, fix="end"), ignore.strand=FALSE, select="last")
+prom_dt_a <- cbind((as.data.table(gr_pliusai[!is.na(ov)]) %>% .[, .(ID, Name, strand, start, end)]), 
+  (as.data.table(pr2do[ov[!is.na(ov)]]) %>% 
+    .[, .(LDF, start_box10, box_10_seq, box_10_score, start_box_35, box_35_seq, box_35_score, start, end)] %>%
+    setnames("start", "start_prom") %>% 
+    setnames("end", "end_prom") %>% 
+    .[])) %>% 
+    as.data.table() %>% 
+    .[strand == "+", dist2prom_bprom := start-end_prom-1] %>% 
+    .[strand == "-", dist2prom_bprom := start_prom - end+1] %>% 
+    .[, `:=` (start_prom=NULL, end_prom=NULL)] 
+
+pr2do <- promotoriai_gr[mcols(promotoriai_gr)$source == "bprom"]
+ov <- findOverlaps(resize(gr_minusai, 1) %>% resize(., 1, fix="start") %>% resize(., 20, fix="end"), resize(pr2do, 1, fix="end"), ignore.strand=FALSE, select="first")
+prom_dt_b <- cbind((as.data.table(gr_minusai[!is.na(ov)]) %>% .[, .(ID, Name, strand, start, end)]), 
+  (as.data.table(pr2do[ov[!is.na(ov)]]) %>% 
+    .[, .(LDF, start_box10, box_10_seq, box_10_score, start_box_35, box_35_seq, box_35_score, start, end)] %>% 
+    setnames("start", "start_prom") %>%
+    setnames("end", "end_prom") %>% 
+    .[])) %>% 
+    as.data.table() %>% 
+    .[strand == "+", dist2prom_bprom := start-end_prom-1] %>% 
+    .[strand == "-", dist2prom_bprom := start_prom - end+1] %>% 
+    .[, `:=` (start_prom=NULL, end_prom=NULL)] 
+
+pr2do <- promotoriai_gr[mcols(promotoriai_gr)$source == "promotech"]
+ov <- findOverlaps(resize(gr_pliusai, 1) %>% resize(., 5, fix="start") %>% resize(., 25, fix="end"), resize(pr2do, 1, fix="end"), ignore.strand=FALSE, select="all")
+
+prom_dt_c <- cbind((as.data.table(gr_pliusai[queryHits(ov)]) %>% .[, .(ID, Name, strand, start, end)]), 
+  (as.data.table(pr2do[subjectHits(ov)]) %>% 
+    .[, .(score, sequence, start, end)] %>%
+    setnames("start", "start_prom") %>% 
+    setnames("end", "end_prom") %>% 
+    setnames("sequence", "PromoTech_sequence") %>% 
+    setnames("score", "PromoTech_score") %>% 
+    .[])) %>% 
+    as.data.table() %>% 
+    .[strand == "+", dist2prom_PromTech := start-(end_prom+1)] %>% 
+    .[, dist2prom_PromTech := dist2prom_PromTech*(-1)] %>% 
+    .[, `:=` (start_prom=NULL, end_prom=NULL)] %>% 
+    .[ , .SD[which.min(abs(dist2prom_PromTech))], by = ID]
+
+pr2do <- promotoriai_gr[mcols(promotoriai_gr)$source == "promotech"]
+ov <- findOverlaps(resize(gr_minusai, 1) %>% resize(., 5, fix="start") %>% resize(., 25, fix="end"), resize(pr2do, 1, fix="end"), ignore.strand=FALSE, select="all")
+prom_dt_d <- cbind((as.data.table(gr_minusai[queryHits(ov)]) %>% .[, .(ID, Name, strand, start, end)]), 
+  (as.data.table(pr2do[subjectHits(ov)]) %>% 
+    .[, .(score, sequence, start, end)] %>% 
+    setnames("start", "start_prom") %>%
+    setnames("end", "end_prom") %>% 
+    setnames("sequence", "PromoTech_sequence") %>% 
+    setnames("score", "PromoTech_score") %>% 
+    .[])) %>% 
+    as.data.table() %>% 
+    .[strand == "-", dist2prom_PromTech := (start_prom -1)- end] %>% 
+    .[, dist2prom_PromTech := dist2prom_PromTech*(-1)] %>% 
+    .[, `:=` (start_prom=NULL, end_prom=NULL)] %>% 
+    .[ , .SD[which.min(abs(dist2prom_PromTech))], by = ID]
+
+prom_dt <- rbind(
+  merge(prom_dt_a, prom_dt_c, all=TRUE, by=c("ID", "Name", "strand", "start", "end")),
+  merge(prom_dt_b, prom_dt_d, all=TRUE, by=c("ID", "Name", "strand", "start", "end")))
+
+saveRDS(prom_dt, paste0(outdatadir, "S4_promoters.RDS"))
+```

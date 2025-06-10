@@ -1,0 +1,63 @@
+### Scikick Project Workflow Configuration File
+
+# Directory where Scikick will store all standard notebook outputs
+reportdir: report
+
+# --- Content below here is best modified by using the Scikick CLI ---
+
+# Notebook Execution Configuration (format summarized below)
+# analysis:
+#  first_notebook.Rmd:
+#  second_notebook.Rmd: 
+#  - first_notebook.Rmd 	# must execute before second_notebook.Rmd
+#  - functions.R 	        # file is used by second_notebook.Rmd
+#
+# Each analysis item is executed to generate md and html files, E.g.:
+# 1. <reportdir>/out_md/first_notebook.md
+# 2. <reportdir>/out_html/first_notebook.html
+analysis: !!omap
+- code/RunAperro.Rmd:
+- code/PrepData_Var2.Rmd:
+  - code/RunAperro.Rmd
+- code/FinalsRNRList.Rmd:
+  - code/PrepData_Var2.Rmd
+- code/CorrectCoordinates_var2.Rmd:
+  - code/FinalsRNRList.Rmd
+- code/GetExpression.Rmd:
+  - code/FinalsRNRList.Rmd
+- code/FinalTable.Rmd:
+  - code/CorrectCoordinates_var2.Rmd
+  - code/GetExpression.Rmd
+  - code/FinalsRNRList.Rmd
+- code/S4_Promoters.Rmd:
+  - code/FinalTable.Rmd
+- code/S5_Terminators.Rmd:
+  - code/FinalTable.Rmd
+- code/S8_ViennaRNA.Rmd:
+  - code/FinalTable.Rmd
+- code/DoClassifications.Rmd:
+  - code/FinalTable.Rmd
+- code/S6_Context.Rmd:
+  - code/FinalTable.Rmd
+  - code/DoClassifications.Rmd
+- code/S10_Olandai.Rmd:
+  - code/FinalTable.Rmd
+- code/S2_general.Rmd:
+  - code/S4_Promoters.Rmd
+  - code/S5_Terminators.Rmd
+  - code/CorrectCoordinates_var2.Rmd
+  - code/GetExpression.Rmd
+  - code/DoClassifications.Rmd
+  - code/FinalTable.Rmd
+- code/Export_excel.Rmd:
+  - code/S2_general.Rmd
+  - code/S4_Promoters.Rmd
+  - code/S5_Terminators.Rmd
+  - code/S8_ViennaRNA.Rmd
+  - code/S6_Context.Rmd
+  - code/FinalsRNRList.Rmd
+  - code/S10_Olandai.Rmd
+version_info:
+  snakemake: 7.26.0
+  ruamel.yaml: 0.17.21
+  scikick: 0.2.1

@@ -1,0 +1,174 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, APERO, Rsamtools, reshape2, snowfall, doParallel, ggplot2, bamsignals, GenomicRanges, Rsamtools, foreach, rtracklayer)
+options(scipen=999)
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+dir.create(outdatadir, recursive=TRUE)
+```
+
+```{r}
+ptt_prot <- read.csv(paste0("NC_009004.gb", ".ptt"), sep="\t", skip=2, header=T, stringsAsFactors = F) %>% as.data.table
+ptt_RNA <- read.csv(paste0("NC_009004.gb", ".rnt"), sep="\t", skip=2, header=T, stringsAsFactors = F) %>% as.data.table
+ptt_RNA_s <- copy(ptt_RNA)
+ptt_RNA_s[, Strand := "-"]
+ptt <- rbind(ptt_prot, ptt_RNA, ptt_RNA_s)
+gff <- import("NC_009004.gff3")
+strucRNAs <- gff[mcols(gff)$gene_biotype %in% c("tRNA", "rRNA") | mcols(gff)$type %in% c("tRNA", "rRNA"), ]
+pseudoGenes <- gff[mcols(gff)$type == "pseudogene"]
+mcols(pseudoGenes) <- NULL 
+samplesInfo <- fread("./input/sampleInfo.txt")
+samples2do <- samplesInfo$Sample
+old_dir <- getwd() 
+
+tmp <- foreach (i=samples2do) %do% {
+   if(!file.exists(paste0(outdatadir, i, "/", i, "_aperro_res2.RDS"))) {
+   #print(i)
+   res_dir <- paste0(outdatadir, i, "/")
+   dir.create(res_dir, recursive=TRUE)
+   res <- APERO_start_detection(work_dir = paste0(outdatadir, i, "/"), 
+                                 bam_name = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                 ptt_file=ptt, 
+                                 wmax = 3, 
+                                 min_dist = 25, 
+                                 enrichment = 0.3, 
+                                 min_read_number = 20, 
+                                 genome_size = 2529478) 
+  saveRDS(res, paste0(i, "_aperro_res.RDS"))                                    
+  
+  res2 <- APERO_end_detection(#work_dir = samplas$outDir, 
+                                work_dir = "./", 
+                                start_table = res, 
+                                mTEX_bam = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                readthrough_proportion = 0.001, 
+                                Fmin = NA, 
+                                thread_number = 12, 
+                                genome_size = 2529478, 
+                                ptt_file = ptt)
+  saveRDS(res2, paste0(i, "_aperro_res2.RDS"))   
+  setwd(old_dir) } 
+}
+
+### Alternative settings. Lets collect results from two runs 
+old_dir <- getwd() 
+
+tmp <- foreach (i=samples2do) %do% {
+   if(!file.exists(paste0(outdatadir, i, "/", i, "_aperro_res2_var2.RDS"))) {
+   #print(i)
+   res_dir <- paste0(outdatadir, i, "/")
+   dir.create(res_dir, recursive=TRUE)
+   res <- APERO_start_detection(work_dir = paste0(outdatadir, i, "/"), 
+                                 bam_name = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                 ptt_file=ptt, 
+                                 wmax = 3, 
+                                 min_dist = 10, 
+                                 enrichment = 0.3, 
+                                 min_read_number = 20, 
+                                 genome_size = 2529478) 
+  saveRDS(res, paste0(i, "_aperro_res_var2.RDS"))                                    
+  
+  res2 <- APERO_end_detection(#work_dir = samplas$outDir, 
+                                work_dir = "./", 
+                                start_table = res, 
+                                mTEX_bam = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                readthrough_proportion = 0.01, 
+                                Fmin = NA, 
+                                thread_number = 12, 
+                                genome_size = 2529478, 
+                                ptt_file = ptt)
+  saveRDS(res2, paste0(i, "_aperro_res2_var2.RDS"))   
+  setwd(old_dir) } 
+}
+
+
+### Alternative settings. Lets collect results from three runs 
+old_dir <- getwd() 
+
+tmp <- foreach (i=samples2do) %do% {
+   if(!file.exists(paste0(outdatadir, i, "/", i, "_aperro_res2_var3.RDS"))) {
+   #print(i)
+   res_dir <- paste0(outdatadir, i, "/")
+   dir.create(res_dir, recursive=TRUE)
+   res <- APERO_start_detection(work_dir = paste0(outdatadir, i, "/"), 
+                                 bam_name = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                 ptt_file=ptt, 
+                                 wmax = 3, 
+                                 min_dist = 30, 
+                                 enrichment = 0.25, 
+                                 min_read_number = 20, 
+                                 genome_size = 2529478) 
+  saveRDS(res, paste0(i, "_aperro_res_var3.RDS"))                                    
+  
+  res2 <- APERO_end_detection(#work_dir = samplas$outDir, 
+                                work_dir = "./", 
+                                start_table = res, 
+                                mTEX_bam = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                readthrough_proportion = 0.05, 
+                                Fmin = NA, 
+                                thread_number = 12, 
+                                genome_size = 2529478, 
+                                ptt_file = ptt)
+  saveRDS(res2, paste0(i, "_aperro_res2_var3.RDS"))   
+  setwd(old_dir) } 
+}
+
+
+### Alternative settings. Lets collect results from 4 runs 
+old_dir <- getwd() 
+
+tmp <- foreach (i=samples2do) %do% {
+   if(!file.exists(paste0(outdatadir, i, "/", i, "_aperro_res2_var4.RDS"))) {
+   #print(i)
+   res_dir <- paste0(outdatadir, i, "/")
+   dir.create(res_dir, recursive=TRUE)
+   res <- APERO_start_detection(work_dir = paste0(outdatadir, i, "/"), 
+                                 bam_name = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                 ptt_file=ptt, 
+                                 wmax = 5, 
+                                 min_dist = 30, 
+                                 enrichment = 0.25, 
+                                 min_read_number = 20, 
+                                 genome_size = 2529478) 
+  saveRDS(res, paste0(i, "_aperro_res_var4.RDS"))                                    
+  
+  res2 <- APERO_end_detection(#work_dir = samplas$outDir, 
+                                work_dir = "./", 
+                                start_table = res, 
+                                mTEX_bam = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                readthrough_proportion = 0.05, 
+                                Fmin = NA, 
+                                thread_number = 12, 
+                                genome_size = 2529478, 
+                                ptt_file = ptt)
+  saveRDS(res2, paste0(i, "_aperro_res2_var4.RDS"))   
+  setwd(old_dir) } 
+}
+
+old_dir <- getwd() 
+tmp <- foreach (i=samples2do) %do% {
+   if(!file.exists(paste0(outdatadir, i, "/", i, "_aperro_res2_var5.RDS"))) {
+   #print(i)
+   res_dir <- paste0(outdatadir, i, "/")
+   dir.create(res_dir, recursive=TRUE)
+   res <- APERO_start_detection(work_dir = paste0(outdatadir, i, "/"), 
+                                 bam_name = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                 ptt_file=ptt, 
+                                 wmax = 3, 
+                                 min_dist = 10, 
+                                 enrichment = 0.3, 
+                                 min_read_number = 20, 
+                                 genome_size = 2529478) 
+  saveRDS(res, paste0(i, "_aperro_res_var5.RDS"))                                    
+  
+  res2 <- APERO_end_detection(#work_dir = samplas$outDir, 
+                                work_dir = "./", 
+                                start_table = res, 
+                                mTEX_bam = paste0("LactissRNA/output/", i,  "/dedSorted_", i, ".bam"), 
+                                readthrough_proportion = 0.01, 
+                                Fmin = NA, 
+                                thread_number = 12, 
+                                genome_size = 2529478, 
+                                ptt_file = ptt)
+  saveRDS(res2, paste0(i, "_aperro_res2_var5.RDS"))   
+  setwd(old_dir) } 
+}
+```

@@ -1,0 +1,142 @@
+##########################################################################################
+# Change default parameters below before kickstarting analysis using "snakemake"
+INPUT_DIRECTORY = "input/"
+EXPERIMENT_NAME = "Lactis_RNA_2018"
+SNAKE_DIRECTORY = workflow.basedir
+GENOME = "NC_009004_ribosomesMasked.fasta"
+RIBO_GENOME = "NC_009004_ribosomes.fasta"
+GFF = "NC_009004_with_sRNA.gff"
+workdir: "LactisRNA/"
+
+####################################################################################################
+# SAMPLES
+
+# Get samples from input directory
+import os
+SAMPLES = os.listdir(INPUT_DIRECTORY)
+print(SAMPLES)
+print(SNAKE_DIRECTORY)
+
+rule all:
+    input:
+        expand("output/{sample}/NotDedup/assembled_{sample}.gtf", sample=SAMPLES),
+        expand("output/{sample}/{sample}.bw", sample=SAMPLES),
+        expand("output/{sample}/00_{sample}_R2_fastqc.html", sample=SAMPLES),
+        expand("output/{sample}/01_{sample}_val_2_fastqc.html", sample=SAMPLES),
+        "output/mapped_counts.tsv"
+
+rule merge_copy_fastq:
+    input:
+        INPUT_DIRECTORY = expand('{INPUT_DIRECTORY}', INPUT_DIRECTORY = INPUT_DIRECTORY),
+    output:
+        R1 = temp("output/{sample}/00_{sample}_R1.fastq.gz"),
+        R2 = temp("output/{sample}/00_{sample}_R2.fastq.gz")
+    threads: 2       
+    shell:
+        """
+        cat {input.INPUT_DIRECTORY}/{wildcards.sample}/*_R1_001.fastq.gz > {output.R1}
+        cat {input.INPUT_DIRECTORY}/{wildcards.sample}/*_R2_001.fastq.gz > {output.R2}
+        """
+        
+rule clean_data:
+    input:
+        R1 = "output/{sample}/00_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/00_{sample}_R2.fastq.gz"
+    output:
+        R1 = temp("output/{sample}/01_{sample}_val_1.fq.gz"),
+        R2 = temp("output/{sample}/01_{sample}_val_2.fq.gz")
+    threads: 40
+    shell:
+        """ 
+        bbduk.sh in={input.R1} in2={input.R2} -t={threads} ref=adaptors.fa out={output.R1} out2={output.R2} ktrim=r k=23 mink=11 hdist=1 maxns=1 tpe tbo qtrim=r trimq=15 minlength=30
+        """
+
+rule remove_ribs: 
+    input:
+        R1 = "output/{sample}/01_{sample}_val_1.fq.gz",
+        R2 = "output/{sample}/01_{sample}_val_2.fq.gz"
+    output:
+        R1 = temp("output/{sample}/02_{sample}_R1.fq.gz"),
+        R2 = temp("output/{sample}/02_{sample}_R2.fq.gz")
+    log: 
+        "logs/{sample}/ribo_map.log"        
+    threads: 40
+    shell:
+        """ 
+        hisat2 -p {threads} --no-spliced-alignment -X 500  -k 2 --no-mixed --no-discordant --new-summary --summary-file {log} -x {RIBO_GENOME} -1 {input.R1} -2 {input.R2} -S output/{wildcards.sample}/tmp.sam --un-conc-gz output/{wildcards.sample}/no_rib
+        rm output/{wildcards.sample}/tmp.sam
+        mv output/{wildcards.sample}/no_rib.1 {output.R1}
+        mv output/{wildcards.sample}/no_rib.2 {output.R2}
+        """
+
+rule map_data_hisat2:
+    input:
+        R1 = "output/{sample}/02_{sample}_R1.fq.gz",
+        R2 = "output/{sample}/02_{sample}_R2.fq.gz"
+    output:
+        BAM = "output/{sample}/{sample}.bam",
+        BAI = "output/{sample}/{sample}.bam.bai"
+    log: "logs/{sample}/hisat2.log"        
+    threads: 40
+    shell:
+        """
+        hisat2 -p {threads} -k 10 --no-unal --no-spliced-alignment -X 500 --no-mixed --no-discordant --new-summary --summary-file {log} -x {GENOME} -1 {input.R1} -2 {input.R2} -S output/{wildcards.sample}/hisat2.sam
+        samtools sort -@ {threads} output/{wildcards.sample}/hisat2.sam -o {output.BAM}
+        rm output/{wildcards.sample}/hisat2.sam
+        samtools index {output.BAM}
+        """        
+
+rule get_expression:
+    input:
+        BAM2 = "output/{sample}/{sample}.bam",
+        BAI = "output/{sample}/{sample}.bam.bai" 
+    output: 
+        GTF2 = "output/{sample}/NotDedup/assembled_{sample}.gtf"
+    log: "logs/{sample}/stringtie.log"
+    threads: 10
+    shell:
+        """
+        mkdir -p output/{wildcards.sample}/NotDedup/
+        stringtie {input.BAM2} -G {GFF} -eB -p {threads} -o {output.GTF2} 
+        """
+
+rule make_deep_bins_notDedup:
+    input:
+        BAM = expand("output/{sample}/{sample}.bam", sample=SAMPLES)
+    output:
+        npz = "output/mapped.npz",
+        counts = "output/mapped_counts.tsv"
+    threads: 40
+    shell:
+        """ 
+        multiBamSummary bins --bamfiles {input.BAM} --outFileName {output.npz} --binSize 1000 --numberOfProcessors {threads} --outRawCounts {output.counts}
+        """
+
+rule make_bw:
+    input: "output/{sample}/{sample}.bam"
+    output: 
+        fw = "output/{sample}/{sample}_reverse.bw",
+        rv = "output/{sample}/{sample}_forward.bw",
+        to = "output/{sample}/{sample}.bw"
+    threads: 10
+    shell:
+        """
+        bamCoverage -b {input} -o {output.fw} --filterRNAstrand forward -bs 1 -p {threads} --effectiveGenomeSize 2529478 --minMappingQuality 0
+        bamCoverage -b {input} -o {output.rv} --filterRNAstrand reverse -bs 1 -p {threads} --effectiveGenomeSize 2529478 --minMappingQuality 0
+        bamCoverage -b {input} -o {output.to} -bs 1 -p {threads} --effectiveGenomeSize 2529478 --minMappingQuality 0
+        """
+
+rule do_fastqc:
+    input:
+        R1 = "output/{sample}/00_{sample}_R1.fastq.gz",
+        R2 = "output/{sample}/00_{sample}_R2.fastq.gz",
+        R3 = "output/{sample}/01_{sample}_val_1.fq.gz",
+        R4 = "output/{sample}/01_{sample}_val_2.fq.gz"
+    output:
+        OUT1 = "output/{sample}/00_{sample}_R2_fastqc.html",
+        OUT2 = "output/{sample}/01_{sample}_val_2_fastqc.html"
+    threads: 4
+    shell:
+        """
+        fastqc -t {threads} --nogroup  {input.R1} {input.R2} {input.R3} {input.R4}
+        """

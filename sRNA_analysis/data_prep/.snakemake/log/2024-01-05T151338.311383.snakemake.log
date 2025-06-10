@@ -1,0 +1,598 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 10
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count    min threads    max threads
+---------------  -------  -------------  -------------
+all                    1              1              1
+dedup_data             7             10             10
+extend_reads           7              6              6
+map_data_hisat2        6             10             10
+move_left              7              1              1
+remap                  7             10             10
+total                 35              1             10
+
+Select jobs to execute...
+
+[Fri Jan  5 15:13:38 2024]
+rule move_left:
+    input: output/FivePoints_1/FivePoints_1.bam
+    output: output/FivePoints_1/selectedMoved.bam, output/FivePoints_1/selectedMoved.bam.bai
+    jobid: 58
+    reason: Missing output files: output/FivePoints_1/selectedMoved.bam.bai, output/FivePoints_1/selectedMoved.bam
+    wildcards: sample=FivePoints_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:18:02 2024]
+Finished job 58.
+1 of 35 steps (3%) done
+Removing temporary output output/FivePoints_1/FivePoints_1.bam.
+Select jobs to execute...
+
+[Fri Jan  5 15:18:02 2024]
+rule map_data_hisat2:
+    input: output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    output: output/PnG_1/PnG_1.bam
+    log: logs/PnG_1/hisat2.log
+    jobid: 23
+    reason: Missing output files: output/PnG_1/PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 15:19:29 2024]
+Finished job 23.
+2 of 35 steps (6%) done
+Select jobs to execute...
+
+[Fri Jan  5 15:19:29 2024]
+rule move_left:
+    input: output/PnG_1/PnG_1.bam
+    output: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai
+    jobid: 22
+    reason: Missing output files: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai; Input files updated by another job: output/PnG_1/PnG_1.bam
+    wildcards: sample=PnG_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:23:23 2024]
+Finished job 22.
+3 of 35 steps (9%) done
+Removing temporary output output/PnG_1/PnG_1.bam.
+Select jobs to execute...
+
+[Fri Jan  5 15:23:23 2024]
+rule map_data_hisat2:
+    input: output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    output: output/Lys_2/Lys_2.bam
+    log: logs/Lys_2/hisat2.log
+    jobid: 50
+    reason: Missing output files: output/Lys_2/Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 15:24:49 2024]
+Finished job 50.
+4 of 35 steps (11%) done
+Select jobs to execute...
+
+[Fri Jan  5 15:24:49 2024]
+rule move_left:
+    input: output/Lys_2/Lys_2.bam
+    output: output/Lys_2/selectedMoved.bam, output/Lys_2/selectedMoved.bam.bai
+    jobid: 49
+    reason: Missing output files: output/Lys_2/selectedMoved.bam.bai, output/Lys_2/selectedMoved.bam; Input files updated by another job: output/Lys_2/Lys_2.bam
+    wildcards: sample=Lys_2
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:28:32 2024]
+Finished job 49.
+5 of 35 steps (14%) done
+Removing temporary output output/Lys_2/Lys_2.bam.
+Select jobs to execute...
+
+[Fri Jan  5 15:28:33 2024]
+rule map_data_hisat2:
+    input: output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz
+    output: output/PnG_2/PnG_2.bam
+    log: logs/PnG_2/hisat2.log
+    jobid: 32
+    reason: Missing output files: output/PnG_2/PnG_2.bam
+    wildcards: sample=PnG_2
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 15:29:53 2024]
+Finished job 32.
+6 of 35 steps (17%) done
+Select jobs to execute...
+
+[Fri Jan  5 15:29:53 2024]
+rule move_left:
+    input: output/PnG_2/PnG_2.bam
+    output: output/PnG_2/selectedMoved.bam, output/PnG_2/selectedMoved.bam.bai
+    jobid: 31
+    reason: Missing output files: output/PnG_2/selectedMoved.bam.bai, output/PnG_2/selectedMoved.bam; Input files updated by another job: output/PnG_2/PnG_2.bam
+    wildcards: sample=PnG_2
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:33:27 2024]
+Finished job 31.
+7 of 35 steps (20%) done
+Removing temporary output output/PnG_2/PnG_2.bam.
+Select jobs to execute...
+
+[Fri Jan  5 15:33:27 2024]
+rule map_data_hisat2:
+    input: output/Control_2/03_Control_2_R1.fastq.gz, output/Control_2/03_Control_2_R2.fastq.gz
+    output: output/Control_2/Control_2.bam
+    log: logs/Control_2/hisat2.log
+    jobid: 14
+    reason: Missing output files: output/Control_2/Control_2.bam
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 15:34:43 2024]
+Finished job 14.
+8 of 35 steps (23%) done
+Select jobs to execute...
+
+[Fri Jan  5 15:34:43 2024]
+rule move_left:
+    input: output/Control_2/Control_2.bam
+    output: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    jobid: 13
+    reason: Missing output files: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai; Input files updated by another job: output/Control_2/Control_2.bam
+    wildcards: sample=Control_2
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:37:54 2024]
+Finished job 13.
+9 of 35 steps (26%) done
+Removing temporary output output/Control_2/Control_2.bam.
+Select jobs to execute...
+
+[Fri Jan  5 15:37:54 2024]
+rule dedup_data:
+    input: output/FivePoints_1/selectedMoved.bam, output/FivePoints_1/selectedMoved.bam.bai
+    output: output/FivePoints_1/dedup_FivePoints_1.bam
+    log: logs/FivePoints_1/dedup.log
+    jobid: 57
+    reason: Missing output files: output/FivePoints_1/dedup_FivePoints_1.bam; Input files updated by another job: output/FivePoints_1/selectedMoved.bam.bai, output/FivePoints_1/selectedMoved.bam
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:46:50 2024]
+Finished job 57.
+10 of 35 steps (29%) done
+Removing temporary output output/FivePoints_1/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 15:46:50 2024]
+rule remap:
+    input: output/FivePoints_1/dedup_FivePoints_1.bam, output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/newR1.fq.gz, output/FivePoints_1/newR2.fq.gz, output/FivePoints_1/dedSorted_FivePoints_1.bam
+    log: logs/FivePoints_1/hisat2_remap.log
+    jobid: 56
+    reason: Missing output files: output/FivePoints_1/dedSorted_FivePoints_1.bam; Input files updated by another job: output/FivePoints_1/dedup_FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:50:12 2024]
+Finished job 56.
+11 of 35 steps (31%) done
+Removing temporary output output/FivePoints_1/dedup_FivePoints_1.bam.
+Removing temporary output output/FivePoints_1/03_FivePoints_1_R1.fastq.gz.
+Removing temporary output output/FivePoints_1/03_FivePoints_1_R2.fastq.gz.
+Removing temporary output output/FivePoints_1/newR1.fq.gz.
+Removing temporary output output/FivePoints_1/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 15:50:13 2024]
+rule map_data_hisat2:
+    input: output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    output: output/Control_1/Control_1.bam
+    log: logs/Control_1/hisat2.log
+    jobid: 5
+    reason: Missing output files: output/Control_1/Control_1.bam
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 15:51:25 2024]
+Finished job 5.
+12 of 35 steps (34%) done
+Select jobs to execute...
+
+[Fri Jan  5 15:51:25 2024]
+rule extend_reads:
+    input: output/FivePoints_1/dedSorted_FivePoints_1.bam
+    output: output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/FivePoints_1/gr_83_FivePoints_1.bedgraph
+    jobid: 55
+    reason: Missing output files: output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/FivePoints_1/gr_83_FivePoints_1.bedgraph; Input files updated by another job: output/FivePoints_1/dedSorted_FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+
+[Fri Jan  5 15:51:25 2024]
+rule move_left:
+    input: output/Control_1/Control_1.bam
+    output: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    jobid: 4
+    reason: Missing output files: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai; Input files updated by another job: output/Control_1/Control_1.bam
+    wildcards: sample=Control_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 15:54:04 2024]
+Finished job 4.
+13 of 35 steps (37%) done
+Removing temporary output output/Control_1/Control_1.bam.
+Select jobs to execute...
+[Fri Jan  5 15:56:09 2024]
+Finished job 55.
+14 of 35 steps (40%) done
+
+[Fri Jan  5 15:56:09 2024]
+rule dedup_data:
+    input: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai
+    output: output/PnG_1/dedup_PnG_1.bam
+    log: logs/PnG_1/dedup.log
+    jobid: 21
+    reason: Missing output files: output/PnG_1/dedup_PnG_1.bam; Input files updated by another job: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:04:22 2024]
+Finished job 21.
+15 of 35 steps (43%) done
+Removing temporary output output/PnG_1/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 16:04:22 2024]
+rule remap:
+    input: output/PnG_1/dedup_PnG_1.bam, output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    output: output/PnG_1/newR1.fq.gz, output/PnG_1/newR2.fq.gz, output/PnG_1/dedSorted_PnG_1.bam
+    log: logs/PnG_1/hisat2_remap.log
+    jobid: 20
+    reason: Missing output files: output/PnG_1/dedSorted_PnG_1.bam; Input files updated by another job: output/PnG_1/dedup_PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:07:27 2024]
+Finished job 20.
+16 of 35 steps (46%) done
+Removing temporary output output/PnG_1/dedup_PnG_1.bam.
+Removing temporary output output/PnG_1/03_PnG_1_R1.fastq.gz.
+Removing temporary output output/PnG_1/03_PnG_1_R2.fastq.gz.
+Removing temporary output output/PnG_1/newR1.fq.gz.
+Removing temporary output output/PnG_1/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 16:07:27 2024]
+rule map_data_hisat2:
+    input: output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    output: output/Lys_1/Lys_1.bam
+    log: logs/Lys_1/hisat2.log
+    jobid: 41
+    reason: Missing output files: output/Lys_1/Lys_1.bam
+    wildcards: sample=Lys_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 16:08:27 2024]
+Finished job 41.
+17 of 35 steps (49%) done
+Select jobs to execute...
+
+[Fri Jan  5 16:08:27 2024]
+rule move_left:
+    input: output/Lys_1/Lys_1.bam
+    output: output/Lys_1/selectedMoved.bam, output/Lys_1/selectedMoved.bam.bai
+    jobid: 40
+    reason: Missing output files: output/Lys_1/selectedMoved.bam, output/Lys_1/selectedMoved.bam.bai; Input files updated by another job: output/Lys_1/Lys_1.bam
+    wildcards: sample=Lys_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Fri Jan  5 16:08:27 2024]
+rule extend_reads:
+    input: output/PnG_1/dedSorted_PnG_1.bam
+    output: output/PnG_1/gr_99_PnG_1.bedgraph, output/PnG_1/gr_83_PnG_1.bedgraph
+    jobid: 19
+    reason: Missing output files: output/PnG_1/gr_83_PnG_1.bedgraph, output/PnG_1/gr_99_PnG_1.bedgraph; Input files updated by another job: output/PnG_1/dedSorted_PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan  5 16:10:48 2024]
+Finished job 40.
+18 of 35 steps (51%) done
+Removing temporary output output/Lys_1/Lys_1.bam.
+Select jobs to execute...
+[Fri Jan  5 16:12:40 2024]
+Finished job 19.
+19 of 35 steps (54%) done
+
+[Fri Jan  5 16:12:40 2024]
+rule dedup_data:
+    input: output/Lys_2/selectedMoved.bam, output/Lys_2/selectedMoved.bam.bai
+    output: output/Lys_2/dedup_Lys_2.bam
+    log: logs/Lys_2/dedup.log
+    jobid: 48
+    reason: Missing output files: output/Lys_2/dedup_Lys_2.bam; Input files updated by another job: output/Lys_2/selectedMoved.bam.bai, output/Lys_2/selectedMoved.bam
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:19:43 2024]
+Finished job 48.
+20 of 35 steps (57%) done
+Removing temporary output output/Lys_2/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 16:19:43 2024]
+rule remap:
+    input: output/Lys_2/dedup_Lys_2.bam, output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    output: output/Lys_2/newR1.fq.gz, output/Lys_2/newR2.fq.gz, output/Lys_2/dedSorted_Lys_2.bam
+    log: logs/Lys_2/hisat2_remap.log
+    jobid: 47
+    reason: Missing output files: output/Lys_2/dedSorted_Lys_2.bam; Input files updated by another job: output/Lys_2/dedup_Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:22:46 2024]
+Finished job 47.
+21 of 35 steps (60%) done
+Removing temporary output output/Lys_2/dedup_Lys_2.bam.
+Removing temporary output output/Lys_2/03_Lys_2_R2.fastq.gz.
+Removing temporary output output/Lys_2/03_Lys_2_R1.fastq.gz.
+Removing temporary output output/Lys_2/newR1.fq.gz.
+Removing temporary output output/Lys_2/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 16:22:46 2024]
+rule dedup_data:
+    input: output/PnG_2/selectedMoved.bam, output/PnG_2/selectedMoved.bam.bai
+    output: output/PnG_2/dedup_PnG_2.bam
+    log: logs/PnG_2/dedup.log
+    jobid: 30
+    reason: Missing output files: output/PnG_2/dedup_PnG_2.bam; Input files updated by another job: output/PnG_2/selectedMoved.bam.bai, output/PnG_2/selectedMoved.bam
+    wildcards: sample=PnG_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:31:12 2024]
+Finished job 30.
+22 of 35 steps (63%) done
+Removing temporary output output/PnG_2/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 16:31:12 2024]
+rule remap:
+    input: output/PnG_2/dedup_PnG_2.bam, output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz
+    output: output/PnG_2/newR1.fq.gz, output/PnG_2/newR2.fq.gz, output/PnG_2/dedSorted_PnG_2.bam
+    log: logs/PnG_2/hisat2_remap.log
+    jobid: 29
+    reason: Missing output files: output/PnG_2/dedSorted_PnG_2.bam; Input files updated by another job: output/PnG_2/dedup_PnG_2.bam
+    wildcards: sample=PnG_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:34:08 2024]
+Finished job 29.
+23 of 35 steps (66%) done
+Removing temporary output output/PnG_2/dedup_PnG_2.bam.
+Removing temporary output output/PnG_2/03_PnG_2_R2.fastq.gz.
+Removing temporary output output/PnG_2/03_PnG_2_R1.fastq.gz.
+Removing temporary output output/PnG_2/newR1.fq.gz.
+Removing temporary output output/PnG_2/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 16:34:08 2024]
+rule dedup_data:
+    input: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    output: output/Control_2/dedup_Control_2.bam
+    log: logs/Control_2/dedup.log
+    jobid: 12
+    reason: Missing output files: output/Control_2/dedup_Control_2.bam; Input files updated by another job: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:41:22 2024]
+Finished job 12.
+24 of 35 steps (69%) done
+Removing temporary output output/Control_2/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 16:41:22 2024]
+rule remap:
+    input: output/Control_2/dedup_Control_2.bam, output/Control_2/03_Control_2_R1.fastq.gz, output/Control_2/03_Control_2_R2.fastq.gz
+    output: output/Control_2/newR1.fq.gz, output/Control_2/newR2.fq.gz, output/Control_2/dedSorted_Control_2.bam
+    log: logs/Control_2/hisat2_remap.log
+    jobid: 11
+    reason: Missing output files: output/Control_2/dedSorted_Control_2.bam; Input files updated by another job: output/Control_2/dedup_Control_2.bam
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:44:02 2024]
+Finished job 11.
+25 of 35 steps (71%) done
+Removing temporary output output/Control_2/dedup_Control_2.bam.
+Removing temporary output output/Control_2/03_Control_2_R1.fastq.gz.
+Removing temporary output output/Control_2/03_Control_2_R2.fastq.gz.
+Removing temporary output output/Control_2/newR1.fq.gz.
+Removing temporary output output/Control_2/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 16:44:03 2024]
+rule dedup_data:
+    input: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    output: output/Control_1/dedup_Control_1.bam
+    log: logs/Control_1/dedup.log
+    jobid: 3
+    reason: Missing output files: output/Control_1/dedup_Control_1.bam; Input files updated by another job: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:49:30 2024]
+Finished job 3.
+26 of 35 steps (74%) done
+Removing temporary output output/Control_1/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 16:49:30 2024]
+rule remap:
+    input: output/Control_1/dedup_Control_1.bam, output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    output: output/Control_1/newR1.fq.gz, output/Control_1/newR2.fq.gz, output/Control_1/dedSorted_Control_1.bam
+    log: logs/Control_1/hisat2_remap.log
+    jobid: 2
+    reason: Missing output files: output/Control_1/dedSorted_Control_1.bam; Input files updated by another job: output/Control_1/dedup_Control_1.bam
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:51:51 2024]
+Finished job 2.
+27 of 35 steps (77%) done
+Removing temporary output output/Control_1/dedup_Control_1.bam.
+Removing temporary output output/Control_1/03_Control_1_R1.fastq.gz.
+Removing temporary output output/Control_1/03_Control_1_R2.fastq.gz.
+Removing temporary output output/Control_1/newR1.fq.gz.
+Removing temporary output output/Control_1/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 16:51:51 2024]
+rule dedup_data:
+    input: output/Lys_1/selectedMoved.bam, output/Lys_1/selectedMoved.bam.bai
+    output: output/Lys_1/dedup_Lys_1.bam
+    log: logs/Lys_1/dedup.log
+    jobid: 39
+    reason: Missing output files: output/Lys_1/dedup_Lys_1.bam; Input files updated by another job: output/Lys_1/selectedMoved.bam, output/Lys_1/selectedMoved.bam.bai
+    wildcards: sample=Lys_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:56:50 2024]
+Finished job 39.
+28 of 35 steps (80%) done
+Removing temporary output output/Lys_1/selectedMoved.bam.
+Select jobs to execute...
+
+[Fri Jan  5 16:56:50 2024]
+rule remap:
+    input: output/Lys_1/dedup_Lys_1.bam, output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    output: output/Lys_1/newR1.fq.gz, output/Lys_1/newR2.fq.gz, output/Lys_1/dedSorted_Lys_1.bam
+    log: logs/Lys_1/hisat2_remap.log
+    jobid: 38
+    reason: Missing output files: output/Lys_1/dedSorted_Lys_1.bam; Input files updated by another job: output/Lys_1/dedup_Lys_1.bam
+    wildcards: sample=Lys_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan  5 16:59:01 2024]
+Finished job 38.
+29 of 35 steps (83%) done
+Removing temporary output output/Lys_1/dedup_Lys_1.bam.
+Removing temporary output output/Lys_1/03_Lys_1_R1.fastq.gz.
+Removing temporary output output/Lys_1/03_Lys_1_R2.fastq.gz.
+Removing temporary output output/Lys_1/newR1.fq.gz.
+Removing temporary output output/Lys_1/newR2.fq.gz.
+Select jobs to execute...
+
+[Fri Jan  5 16:59:01 2024]
+rule extend_reads:
+    input: output/Lys_2/dedSorted_Lys_2.bam
+    output: output/Lys_2/gr_99_Lys_2.bedgraph, output/Lys_2/gr_83_Lys_2.bedgraph
+    jobid: 46
+    reason: Missing output files: output/Lys_2/gr_99_Lys_2.bedgraph, output/Lys_2/gr_83_Lys_2.bedgraph; Input files updated by another job: output/Lys_2/dedSorted_Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan  5 17:02:56 2024]
+Finished job 46.
+30 of 35 steps (86%) done
+Select jobs to execute...
+
+[Fri Jan  5 17:02:56 2024]
+rule extend_reads:
+    input: output/PnG_2/dedSorted_PnG_2.bam
+    output: output/PnG_2/gr_99_PnG_2.bedgraph, output/PnG_2/gr_83_PnG_2.bedgraph
+    jobid: 28
+    reason: Missing output files: output/PnG_2/gr_83_PnG_2.bedgraph, output/PnG_2/gr_99_PnG_2.bedgraph; Input files updated by another job: output/PnG_2/dedSorted_PnG_2.bam
+    wildcards: sample=PnG_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan  5 17:06:36 2024]
+Finished job 28.
+31 of 35 steps (89%) done
+Select jobs to execute...
+
+[Fri Jan  5 17:06:36 2024]
+rule extend_reads:
+    input: output/Control_2/dedSorted_Control_2.bam
+    output: output/Control_2/gr_99_Control_2.bedgraph, output/Control_2/gr_83_Control_2.bedgraph
+    jobid: 10
+    reason: Missing output files: output/Control_2/gr_83_Control_2.bedgraph, output/Control_2/gr_99_Control_2.bedgraph; Input files updated by another job: output/Control_2/dedSorted_Control_2.bam
+    wildcards: sample=Control_2
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan  5 17:10:08 2024]
+Finished job 10.
+32 of 35 steps (91%) done
+Select jobs to execute...
+
+[Fri Jan  5 17:10:08 2024]
+rule extend_reads:
+    input: output/Control_1/dedSorted_Control_1.bam
+    output: output/Control_1/gr_99_Control_1.bedgraph, output/Control_1/gr_83_Control_1.bedgraph
+    jobid: 1
+    reason: Missing output files: output/Control_1/gr_99_Control_1.bedgraph, output/Control_1/gr_83_Control_1.bedgraph; Input files updated by another job: output/Control_1/dedSorted_Control_1.bam
+    wildcards: sample=Control_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan  5 17:13:16 2024]
+Finished job 1.
+33 of 35 steps (94%) done
+Select jobs to execute...
+
+[Fri Jan  5 17:13:16 2024]
+rule extend_reads:
+    input: output/Lys_1/dedSorted_Lys_1.bam
+    output: output/Lys_1/gr_99_Lys_1.bedgraph, output/Lys_1/gr_83_Lys_1.bedgraph
+    jobid: 37
+    reason: Missing output files: output/Lys_1/gr_99_Lys_1.bedgraph, output/Lys_1/gr_83_Lys_1.bedgraph; Input files updated by another job: output/Lys_1/dedSorted_Lys_1.bam
+    wildcards: sample=Lys_1
+    threads: 6
+    resources: tmpdir=/tmp, mem_gb=10
+
+[Fri Jan  5 17:16:08 2024]
+Finished job 37.
+34 of 35 steps (97%) done
+Select jobs to execute...
+
+[Fri Jan  5 17:16:08 2024]
+localrule all:
+    input: output/Control_1/gr_99_Control_1.bedgraph, output/Control_2/gr_99_Control_2.bedgraph, output/PnG_1/gr_99_PnG_1.bedgraph, output/PnG_2/gr_99_PnG_2.bedgraph, output/Lys_1/gr_99_Lys_1.bedgraph, output/Lys_2/gr_99_Lys_2.bedgraph, output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/Control_1/gr_83_Control_1.bedgraph, output/Control_2/gr_83_Control_2.bedgraph, output/PnG_1/gr_83_PnG_1.bedgraph, output/PnG_2/gr_83_PnG_2.bedgraph, output/Lys_1/gr_83_Lys_1.bedgraph, output/Lys_2/gr_83_Lys_2.bedgraph, output/FivePoints_1/gr_83_FivePoints_1.bedgraph, output/Control_1/dedSorted_Control_1.bam, output/Control_2/dedSorted_Control_2.bam, output/PnG_1/dedSorted_PnG_1.bam, output/PnG_2/dedSorted_PnG_2.bam, output/Lys_1/dedSorted_Lys_1.bam, output/Lys_2/dedSorted_Lys_2.bam, output/FivePoints_1/dedSorted_FivePoints_1.bam, output/Control_1/00_Control_1_R2_fastqc.html, output/Control_2/00_Control_2_R2_fastqc.html, output/PnG_1/00_PnG_1_R2_fastqc.html, output/PnG_2/00_PnG_2_R2_fastqc.html, output/Lys_1/00_Lys_1_R2_fastqc.html, output/Lys_2/00_Lys_2_R2_fastqc.html, output/FivePoints_1/00_FivePoints_1_R2_fastqc.html, output/Control_1/03_Control_1_R2_fastqc.html, output/Control_2/03_Control_2_R2_fastqc.html, output/PnG_1/03_PnG_1_R2_fastqc.html, output/PnG_2/03_PnG_2_R2_fastqc.html, output/Lys_1/03_Lys_1_R2_fastqc.html, output/Lys_2/03_Lys_2_R2_fastqc.html, output/FivePoints_1/03_FivePoints_1_R2_fastqc.html
+    jobid: 0
+    reason: Input files updated by another job: output/Lys_1/gr_99_Lys_1.bedgraph, output/Control_1/gr_83_Control_1.bedgraph, output/FivePoints_1/gr_83_FivePoints_1.bedgraph, output/PnG_2/gr_83_PnG_2.bedgraph, output/Lys_1/gr_83_Lys_1.bedgraph, output/Control_2/gr_83_Control_2.bedgraph, output/Control_2/gr_99_Control_2.bedgraph, output/FivePoints_1/gr_99_FivePoints_1.bedgraph, output/PnG_1/gr_99_PnG_1.bedgraph, output/PnG_2/dedSorted_PnG_2.bam, output/Lys_2/dedSorted_Lys_2.bam, output/FivePoints_1/dedSorted_FivePoints_1.bam, output/PnG_1/gr_83_PnG_1.bedgraph, output/Lys_2/gr_99_Lys_2.bedgraph, output/PnG_1/dedSorted_PnG_1.bam, output/Control_1/gr_99_Control_1.bedgraph, output/PnG_2/gr_99_PnG_2.bedgraph, output/Lys_1/dedSorted_Lys_1.bam, output/Lys_2/gr_83_Lys_2.bedgraph, output/Control_1/dedSorted_Control_1.bam, output/Control_2/dedSorted_Control_2.bam
+    resources: tmpdir=/tmp
+
+[Fri Jan  5 17:16:08 2024]
+Finished job 0.
+35 of 35 steps (100%) done
+Complete log: ../../../../../scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/.snakemake/log/2024-01-05T151338.311383.snakemake.log

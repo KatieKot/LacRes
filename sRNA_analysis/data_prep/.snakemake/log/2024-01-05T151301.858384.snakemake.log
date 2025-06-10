@@ -1,0 +1,7 @@
+Building DAG of jobs...
+MissingInputException in rule dedup_data in file /scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/Snakefile, line 115:
+Missing input files for rule dedup_data:
+    output: output/Control_1/dedup_Control_1.bam
+    wildcards: sample=Control_1
+    affected files:
+        output/Control_1/selectedMoved.bam.bai

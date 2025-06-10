@@ -1,0 +1,165 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 36
+Rules claiming more threads will be scaled down.
+Job stats:
+job               count    min threads    max threads
+--------------  -------  -------------  -------------
+all                   1              1              1
+get_expression        6              6              6
+total                 7              1              6
+
+Select jobs to execute...
+
+[Wed Jan  3 16:50:34 2024]
+rule get_expression:
+    input: output/Control_R3/Control_R3.bam
+    output: output/Control_R3/NotDedup/assembled_Control_R3.gtf
+    log: logs/Control_R3/stringtie.log
+    jobid: 9
+    reason: Missing output files: output/Control_R3/NotDedup/assembled_Control_R3.gtf
+    wildcards: sample=Control_R3
+    threads: 6
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 16:50:34 2024]
+rule get_expression:
+    input: output/Sample_R1/Sample_R1.bam
+    output: output/Sample_R1/NotDedup/assembled_Sample_R1.gtf
+    log: logs/Sample_R1/stringtie.log
+    jobid: 13
+    reason: Missing output files: output/Sample_R1/NotDedup/assembled_Sample_R1.gtf
+    wildcards: sample=Sample_R1
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 16:50:34 2024]
+Error in rule get_expression:
+    jobid: 9
+    input: output/Control_R3/Control_R3.bam
+    output: output/Control_R3/NotDedup/assembled_Control_R3.gtf
+    log: logs/Control_R3/stringtie.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p output/Control_R3/NotDedup/
+        /mnt/store/DMTS/common_programs/stringtie-2.1.5.Linux_x86_64/stringtie output/Control_R3/Control_R3.bam -G /mnt/store/annotations/NC_009004_with_6libs_sRNA_23.12.06.gff -eB -p 6 -o output/Control_R3/NotDedup/assembled_Control_R3.gtf 
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+
+[Wed Jan  3 16:50:34 2024]
+rule get_expression:
+    input: output/Sample_R2/Sample_R2.bam
+    output: output/Sample_R2/NotDedup/assembled_Sample_R2.gtf
+    log: logs/Sample_R2/stringtie.log
+    jobid: 17
+    reason: Missing output files: output/Sample_R2/NotDedup/assembled_Sample_R2.gtf
+    wildcards: sample=Sample_R2
+    threads: 6
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 16:50:34 2024]
+rule get_expression:
+    input: output/Sample_R3/Sample_R3.bam
+    output: output/Sample_R3/NotDedup/assembled_Sample_R3.gtf
+    log: logs/Sample_R3/stringtie.log
+    jobid: 21
+    reason: Missing output files: output/Sample_R3/NotDedup/assembled_Sample_R3.gtf
+    wildcards: sample=Sample_R3
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 16:50:34 2024]
+Error in rule get_expression:
+    jobid: 13
+    input: output/Sample_R1/Sample_R1.bam
+    output: output/Sample_R1/NotDedup/assembled_Sample_R1.gtf
+    log: logs/Sample_R1/stringtie.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p output/Sample_R1/NotDedup/
+        /mnt/store/DMTS/common_programs/stringtie-2.1.5.Linux_x86_64/stringtie output/Sample_R1/Sample_R1.bam -G /mnt/store/annotations/NC_009004_with_6libs_sRNA_23.12.06.gff -eB -p 6 -o output/Sample_R1/NotDedup/assembled_Sample_R1.gtf 
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Wed Jan  3 16:50:34 2024]
+Error in rule get_expression:
+    jobid: 17
+    input: output/Sample_R2/Sample_R2.bam
+    output: output/Sample_R2/NotDedup/assembled_Sample_R2.gtf
+    log: logs/Sample_R2/stringtie.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p output/Sample_R2/NotDedup/
+        /mnt/store/DMTS/common_programs/stringtie-2.1.5.Linux_x86_64/stringtie output/Sample_R2/Sample_R2.bam -G /mnt/store/annotations/NC_009004_with_6libs_sRNA_23.12.06.gff -eB -p 6 -o output/Sample_R2/NotDedup/assembled_Sample_R2.gtf 
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+
+[Wed Jan  3 16:50:34 2024]
+rule get_expression:
+    input: output/Control_R1/Control_R1.bam
+    output: output/Control_R1/NotDedup/assembled_Control_R1.gtf
+    log: logs/Control_R1/stringtie.log
+    jobid: 1
+    reason: Missing output files: output/Control_R1/NotDedup/assembled_Control_R1.gtf
+    wildcards: sample=Control_R1
+    threads: 6
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 16:50:34 2024]
+rule get_expression:
+    input: output/Control_R2/Control_R2.bam
+    output: output/Control_R2/NotDedup/assembled_Control_R2.gtf
+    log: logs/Control_R2/stringtie.log
+    jobid: 5
+    reason: Missing output files: output/Control_R2/NotDedup/assembled_Control_R2.gtf
+    wildcards: sample=Control_R2
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Wed Jan  3 16:50:34 2024]
+Error in rule get_expression:
+    jobid: 21
+    input: output/Sample_R3/Sample_R3.bam
+    output: output/Sample_R3/NotDedup/assembled_Sample_R3.gtf
+    log: logs/Sample_R3/stringtie.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p output/Sample_R3/NotDedup/
+        /mnt/store/DMTS/common_programs/stringtie-2.1.5.Linux_x86_64/stringtie output/Sample_R3/Sample_R3.bam -G /mnt/store/annotations/NC_009004_with_6libs_sRNA_23.12.06.gff -eB -p 6 -o output/Sample_R3/NotDedup/assembled_Sample_R3.gtf 
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Wed Jan  3 16:50:34 2024]
+Error in rule get_expression:
+    jobid: 1
+    input: output/Control_R1/Control_R1.bam
+    output: output/Control_R1/NotDedup/assembled_Control_R1.gtf
+    log: logs/Control_R1/stringtie.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p output/Control_R1/NotDedup/
+        /mnt/store/DMTS/common_programs/stringtie-2.1.5.Linux_x86_64/stringtie output/Control_R1/Control_R1.bam -G /mnt/store/annotations/NC_009004_with_6libs_sRNA_23.12.06.gff -eB -p 6 -o output/Control_R1/NotDedup/assembled_Control_R1.gtf 
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Wed Jan  3 16:50:34 2024]
+Error in rule get_expression:
+    jobid: 5
+    input: output/Control_R2/Control_R2.bam
+    output: output/Control_R2/NotDedup/assembled_Control_R2.gtf
+    log: logs/Control_R2/stringtie.log (check log file(s) for error details)
+    shell:
+        
+        mkdir -p output/Control_R2/NotDedup/
+        /mnt/store/DMTS/common_programs/stringtie-2.1.5.Linux_x86_64/stringtie output/Control_R2/Control_R2.bam -G /mnt/store/annotations/NC_009004_with_6libs_sRNA_23.12.06.gff -eB -p 6 -o output/Control_R2/NotDedup/assembled_Control_R2.gtf 
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: ../../../../../scratch/kotryna/Giedrius/2024_GRIL/data_prep/.snakemake/log/2024-01-03T165034.306812.snakemake.log

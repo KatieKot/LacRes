@@ -1,0 +1,233 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, GenomicRanges, rtracklayer, DT, foreach, stringr)
+dir.create(outdatadir, recursive = TRUE)
+```
+
+```{r}
+# padarom mini anotacija 
+junk <- function(x) {paste(x, collapse = "; ", sep="_")}
+d <- ape::read.gff("NC_009004.gff3") %>% 
+  as.data.table() %>% 
+  unique
+d <- d[type != "region" & type != "riboswitch" & type != "sequence_feature" & type != "binding_site", ]  %>% 
+  .[, ID := str_extract(attributes, "ID=[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("ID=", "", .)] %>% 
+  .[, Parent := str_extract(attributes, "Parent=[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("Parent=", "", .)] %>% 
+  .[, gbkey := str_extract(attributes, "gbkey=[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("gbkey=", "", .)] %>% 
+  .[, gene := str_extract(attributes, "gene=[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("gene=", "", .)] %>% 
+  .[, locus_tag := str_extract(attributes, "locus_tag=[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("locus_tag=", "", .)] %>% 
+  .[, product := str_extract(attributes, "product=[:print:]+") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("product=", "", .)] %>% 
+  .[, Name := str_extract(attributes, "Name=[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("Name=", "", .)] %>% 
+  .[, old_locus := str_extract(attributes, "old_locus_tag=[:print:]+") %>% strsplit(., ";") %>% sapply(., `[`, 1) %>% gsub("old_locus_tag=", "", .)] %>% 
+  .[, LLMG := str_extract(attributes, "LLMG_[:print:]+[;$]") %>% strsplit(., ";") %>% sapply(., `[`, 1)] %>% 
+  .[, attributes := NULL] %>%
+  .[, QR := paste0(start, "_", end, "_", strand)] 
+
+anotacija <- foreach (i=unique(d$QR), .combine="rbind") %do% {
+  eilutes <- d[QR == i]
+  seqid <- eilutes$seqid %>% as.character.factor %>% unique
+  sourcas <- eilutes$source %>% .[!is.na(.)] %>% unique %>% junk
+  tipas <- eilutes$type %>% .[!is.na(.)] %>% unique %>% junk
+  locus_tag <- eilutes$locus_tag %>%  .[!is.na(.)] %>% unique %>% junk
+  product <- eilutes$product %>% .[!is.na(.)] %>% unique %>% junk
+  old_locus <- eilutes$old_locus %>% .[!is.na(.)] %>% unique %>% junk
+  ID <- eilutes$ID %>% .[!is.na(.)] %>% unique %>% junk
+  startas <- eilutes$start %>% .[!is.na(.)] %>% unique %>% junk
+  endas <- eilutes$end %>% .[!is.na(.)] %>% unique %>% junk
+  strandas <- eilutes$strand %>% .[!is.na(.)] %>% unique %>% junk
+  return(c(seqid, startas, endas, strandas, sourcas, tipas, locus_tag, product, old_locus, ID))
+} %>% as.data.table() 
+
+setnames(anotacija, c("seqid", "start", "end", "strand", "BasedOn", "feature", "LLMG", "Product", "old_LLMG", "ID"))
+
+# sutvarkom transpozaziu reikala - sujungiam i placiausia 
+tmp <- anotacija[anotacija$LLMG == "", ]
+for (i in 1:nrow(tmp)) {
+  pas <- anotacija[LLMG == tmp[i, ID] %>% gsub("gene-", "", .), ]
+  #nline <- c(min(pas$start), max(pas$end), unique(pas$strand), junk(unique(pas$BasedOn)), junk(unique(pas$feature)), junk(unique(pas$LLMG)), junk(unique(pas$Product)), junk(unique(pas$old_LLMG)))
+  anotacija <- anotacija[!(LLMG == tmp[i, ID] %>% gsub("gene-", "", .)), ]
+  anotacija <- anotacija[ID != tmp[i, ID]]
+  anotacija <- 
+  rbind(anotacija, 
+  list(unique(pas$seqid), min(pas$start), max(pas$end), unique(pas$strand), junk(unique(pas$BasedOn)), junk(unique(pas$feature)), junk(unique(pas$LLMG)), junk(unique(pas$Product)), junk(unique(pas$old_LLMG)), junk(unique(pas$ID))) )
+}
+
+anno <- foreach(i=unique(anotacija$LLMG), .combine='rbind') %do% {
+   pas <- anotacija[LLMG == i, ]
+   rez <- c(unique(pas$seqid), min(pas$start), max(pas$end), unique(pas$strand), junk(unique(pas$BasedOn)), junk(unique(pas$feature)), junk(unique(pas$LLMG)), junk(unique(pas$Product)), junk(unique(pas$old_LLMG)), junk(unique(pas$ID)))
+   return(rez)
+} %>% 
+  as.data.table %>% 
+  setnames(., c("chr", "start", "end", "strand", "program", "feature", "LLMG", "product", "old_locus", "otherID")) %>% 
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+
+saveRDS(anno, paste0(outdatadir, "Mini_anotacija.RDS"))
+```
+
+```{r}
+#### Gaunam persidengimus 
+gff <- readRDS(paste0(outdatadir, "/Mini_anotacija.RDS"))
+sRNR_ranges <- readRDS("./output/code/FinalTable/all_sRNA.RDS")
+mcols(sRNR_ranges)$QR <- mcols(sRNR_ranges)$ID
+ov <- findOverlaps(sRNR_ranges, gff, ignore.strand=FALSE, select="all")
+piint <- pintersect(sRNR_ranges[queryHits(ov)], gff[subjectHits(ov)], ignore.strand=FALSE)
+percentOverlap <- width(piint) / width(sRNR_ranges[queryHits(ov)]) * 100
+persidengimai <- data.frame(as.matrix(percentOverlap)) 
+persidengimai$QR <- mcols(sRNR_ranges[queryHits(ov)])$QR
+persidengimai$genai <- width(piint) / width(gff[subjectHits(ov)]) * 100
+setDT(persidengimai) 
+setnames(persidengimai, c("overlap", "QR", "genoDalis"))
+saveRDS(persidengimai, paste0(outdatadir, "persidengimai.RDS"))
+```
+
+sRNR klasifikavimas pagal Mickute et al., 2021 straipsnio S11 figūrą. 
+
+```{r}
+sRNR <- readRDS("./output/code/FinalTable/all_sRNA.RDS")
+d <- import("NC_009004.gff3") %>% unique
+d <- d[mcols(d)$type != "region" & mcols(d)$type != "binding_site" & mcols(d)$type != "riboswitch" & mcols(d)$type != "sequence_feature", ]
+
+# intergenic
+i <- distanceToNearest(sRNR, d, ignore.strand=TRUE)
+intergenic <-  sRNR[mcols(i)$distance >= 50, ]
+i <- nearest(intergenic, d, ignore.strand=TRUE)
+intergenic$attributes <- d[i]$attributes
+
+# intragenines - full overlap 
+i <- findOverlaps(sRNR, d, type="within", ignore.strand=FALSE)
+intragenic <- sRNR[queryHits(i)]
+intragenic$attributes <- "To Be Written"
+#intragenic$attributes <- d[subjectHits(i), ]$attributes
+
+# antisence
+sRNR_anti <- as.data.table(sRNR) %>% 
+  .[, strand := as.character.factor(strand) ] %>% 
+  .[strand == "+", strand := "m"] %>% 
+  .[strand == "-", strand := "p"] %>% 
+  .[strand == "m", strand := "-"] %>%
+  .[strand == "p", strand := "+"] %>%
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+i <- countOverlaps(sRNR_anti, d, maxgap=50L, ignore.strand=FALSE)
+anti <- sRNR_anti[i>0] #%>% 
+   #as.data.table() %>% 
+  #.[, strand := as.character.factor(strand) ] %>% 
+  #.[strand == "+", strand := "m"] %>% 
+  #.[strand == "-", strand := "p"] %>% 
+  #.[strand == "m", strand := "-"] %>%
+  #.[strand == "p", strand := "+"] %>%
+  #makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+
+antisence <- foreach(j=1:length(anti), .combine='rbind') %do% {
+  ov <- findOverlaps(anti[j], d,  maxgap=50L, ignore.strand=FALSE)
+  dt <- d[subjectHits(ov)] %>% as.data.table
+  dt <- dt[, sRNR := anti[j]$ID] %>% 
+  .[strand == "+", strand := "m"] %>% 
+  .[strand == "-", strand := "p"] %>% 
+  .[strand == "m", strand := "-"] %>%
+  .[strand == "p", strand := "+"]
+  return(dt)
+}
+
+# UTR5
+# make upstream regions (50 bp) and check for overlap. 
+promotoriai <- promoters(d, upstream=50, downstream=0)
+mcols(promotoriai)$score <- 50
+i <- findOverlaps(sRNR, promotoriai, ignore.strand=FALSE)
+ups <- sRNR[queryHits(i)]
+
+UTR5 <- foreach(j=1:length(ups), .combine='rbind') %do% {
+  ov <- findOverlaps(ups[j], promotoriai, ignore.strand=FALSE)
+  dt <- promotoriai[subjectHits(ov)] %>% as.data.table
+  dt <- dt[, sRNR := ups[j]$ID]
+  return(dt)
+}
+
+# UTR3
+downai <- resize(d, fix="end", width=50) %>% 
+  resize(., fix="start", width=100) %>% 
+  resize(., fix="end", width=50) 
+mcols(downai)$score <- 50 
+
+i <- findOverlaps(sRNR, downai, ignore.strand=FALSE)
+ups<- sRNR[queryHits(i)]
+
+UTR3 <- foreach(j=1:length(ups), .combine='rbind') %do% {
+  ov <- findOverlaps(ups[j], downai, ignore.strand=FALSE)
+  dt <- downai[subjectHits(ov)] %>% as.data.table
+  dt <- dt[, sRNR := ups[j]$ID]
+  return(dt)
+}
+
+#antisence 
+#intergenic
+#intragenic
+#ups5
+#ups3
+
+d <- as.data.frame(sRNR) %>% 
+  as.data.table %>% 
+  .[, score := NULL] %>% 
+  .[, QR := ID] %>% 
+  .[ID %in% antisence$sRNR, antisence := "antisence"] %>% 
+  .[ID %in% intergenic$ID, intergenic := "intergenic"] %>% 
+  .[ID %in% intragenic$ID, intragenic := "intragenic"] %>% 
+  .[ID %in% UTR5$sRNR, UTR5 := "5' UTR"] %>% 
+  .[ID %in% UTR3$sRNR, UTR3 := "3' UTR"] %>% 
+  .[, Class := paste(antisence, intergenic, intragenic, UTR5, UTR3, sep="/")] %>% 
+  .[, Class := gsub("NA/", "", Class)] %>% 
+  .[, Class := gsub("/NA", "", Class)] %>% 
+  .[QR %in% persidengimai[genoDalis>90, QR], Class := "intragenic"] %>% 
+  .[, c("seqnames", "start", "end", "width", "strand", "ID", "Class"), with=FALSE]
+
+#[1] "NC_009004.1_1824198_1824289_-" "NC_009004.1_1029012_1029420_+"
+#[3] "NC_009004.1_759043_759474_+"  
+
+#DT::datatable(as.data.frame(d))
+saveRDS(d, paste0(outdatadir, "klasifikacija.RDS"))
+#saveRDS(rbind(as.data.table(intergenic)[, c("attributes", "name"), with=FALSE] %>% setnames(., c("attributes", "sRNR")), 
+#              as.data.table(intragenic)[, c("attributes", "name"), with=FALSE] %>% setnames(., c("attributes", "sRNR")), 
+#              antisence[, c("attributes", "sRNR")], 
+#              UTR5[, c("attributes", "sRNR")], 
+#              UTR3[, c("attributes", "sRNR")]),  paste0(outdatadir, "Sur_genes.RDS"))
+
+
+```
+
+```{r}
+#rfam leista 2024 01 16
+#rfam leista 2024 05 20
+#rfam leista 2024 07 05
+#rfam leista 2024 07 16
+#rfam leista 2024 07 17
+
+rfam <- fread("cat input/rfam_20240717_222sRNR.txt | grep -v '^#' | sed 's/!.*//g'")
+rfam$longName <- system("cat input/rfam_20240705_221sRNR.txt | grep -v '^#' | sed -s 's/.*!//g' | sed -s 's/^ \\+//g'", intern=TRUE)
+setnames(rfam, c("shortName", "rfamID", "sRNRID", "tmp1", "tmp2", "tmp3", "tmp4", "tmp5", "tmp6", "tmp7", "tmp8", "tmp9", "tmp10", "tmp11", "tmp12", "tmp13", "LongName"))
+rfam <- rfam %>% .[, sRNR := strsplit(sRNRID, ":") %>% sapply(., `[`, 1)] %>% .[, sRNRID := NULL]
+saveRDS(rfam, paste0(outdatadir, "rfam.RDS"))
+```
+
+
+```{r}
+# padarom bendrai konteksta (t.y. pliusiukus/minusiukus)
+gff <- readRDS(paste0(outdatadir, "/Mini_anotacija.RDS"))
+sRNR_ranges <- readRDS("./output/code/FinalTable/all_sRNA.RDS")
+mcols(sRNR_ranges)$QR <- mcols(sRNR_ranges)$ID
+pliusines <- sRNR_ranges[strand(sRNR_ranges) == "+"]
+minusines <- sRNR_ranges[strand(sRNR_ranges) == "-"]
+
+pr <- precede(pliusines, gff, ignore.strand=TRUE)
+fo <- follow(pliusines, gff, ignore.strand=TRUE)
+
+mcols(pliusines)$context <- paste((gff[fo] %>% as.data.table() %>% .[, strand]), strand(pliusines), (gff[pr] %>% as.data.table() %>% .[, strand]), sep="/")
+
+pr <- precede(minusines, gff, ignore.strand=TRUE)
+fo <- follow(minusines, gff, ignore.strand=TRUE)
+mcols(minusines)$context <- paste((gff[pr] %>% as.data.table() %>% .[, strand]), strand(minusines), (gff[fo] %>% as.data.table() %>% .[, strand]), sep="/")
+
+saveRDS(c(pliusines, minusines), paste0(outdatadir, "AroundContext.RDS"))
+```
+
+
+
+

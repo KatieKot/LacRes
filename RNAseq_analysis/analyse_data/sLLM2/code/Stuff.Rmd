@@ -1,0 +1,81 @@
+```{r}
+library(pacman) 
+p_load(data.table, dplyr, ggplot2, stringr, foreach, scales, ggpubr, RColorBrewer, circlize,
+  ComplexHeatmap, tximport, readr, DESeq2, DT, clusterProfiler, xlsx, rtracklayer, ggrepel, tidyr)
+options(scipen=999)
+#source("./code/functions.R")
+knitr::opts_chunk$set(fig.width=9, fig.height=5)
+dir.create(outdatadir, recursive=TRUE)
+
+pval <- 0.0005
+FC <- 1.5
+d <- readRDS("./output/code/DE_analysis_edgeR/significant.RDS")
+```
+
+# Dalykai {.tabset}
+
+## Operonai
+
+Klausimas: kiek genu is operono buvo testuota, kiek pakito 
+Sprendimas: operonus nuspejau su https://biocomputo.ibt.unam.mx/ ir perdengiau su genais. 
+
+```{r}
+data <- read.delim("input/OperonPred/list_of_operons_1768920", header = FALSE, stringsAsFactors = FALSE)
+data <- data %>%
+  mutate(Operon = ifelse(grepl("^\\d+$", V1), V1, NA))  # Operon number is assumed to be a numeric value
+data <- data %>%
+  fill(Operon, .direction = "down")
+
+genes_data <- data[, c("V2", "Operon")] %>%
+  filter(!is.na(Operon)) %>%
+  group_by(Operon) %>%
+  summarise(genes = paste(V2, collapse = ", "), .groups = "drop") %>% 
+  as.data.table() 
+
+genes_data$genes <- gsub("^, ", "", genes_data$genes)
+
+perGene_data <- data[, c("V2", "Operon")] %>%
+  filter(!is.na(Operon)) %>% 
+  filter(!is.na(V2)) %>% 
+  as.data.table() %>% 
+  .[!V2 == "", ] %>% 
+  .[, isDE := ] %>% 
+
+sarasas <- fread("../Orig_analysis/input/qPCR_ID.txt", header=FALSE)
+vardai <- fread("../Orig_analysis/input/qPCR_ID_long.txt", header=FALSE)
+
+tikslines <- merge(sarasas, vardai, by="V1", all=TRUE) %>% 
+  setnames(., c("LocusTag", "Gene", "Set", "oldLocus", "fullGene")) %>% 
+  .[is.na(oldLocus), fullGene := Gene] %>% 
+  .[is.na(oldLocus), oldLocus := Gene] %>%
+  .[grepl("sLLM2", Set)]  %>% 
+  .[fullGene != "alr"] %>% 
+  .[Gene == "llmg_0760", Gene := "cds-CAL97364.1"] %>% 
+  .[Gene == "ribU", Gene := "cds-CAL97788.1"] 
+
+# pervadinta, nes operonuose kitas pavadinimas 
+#"llmg_0760" ->  "cds-CAL97364.1"
+#"ribU" -> "cds-CAL97788.1"
+perGene_data$validated <- as.numeric(perGene_data$V2 %in% tikslines$Gene)
+tikslines$Gene[!tikslines$Gene %in% perGene_data$V2]
+
+
+OpTest <- perGene_data %>% 
+  as.data.table() %>% 
+  .[, kiekiui := 1] %>% 
+  .[, .(Operon, validated, kiekiui)] %>% 
+  .[, lapply(.SD, sum), by="Operon"] %>% 
+  .[validated > 0, ] %>% 
+  .[]
+
+
+
+
+
+
+
+
+
+gff <- rtracklayer::import("/mnt/store/annotations/NC_009004/NC_009004_with_sRNA_240717.gff")
+
+```

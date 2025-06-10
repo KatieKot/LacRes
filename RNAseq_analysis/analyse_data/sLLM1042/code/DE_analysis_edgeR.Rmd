@@ -1,0 +1,136 @@
+```{r}
+library(pacman) 
+p_load(data.table, dplyr, ggplot2, stringr, foreach, scales, ggpubr, RColorBrewer, 
+  ComplexHeatmap, tximport, readr, DESeq2, DT, clusterProfiler, limma, edgeR)
+options(scipen=999)
+knitr::opts_chunk$set(fig.width=9, fig.height=5)
+dir.create(outdatadir, recursive=TRUE)
+set.seed(1760)
+pval <- 0.0005
+FC <- 1.5
+
+# standard GFF with additional sRNAs. 
+gff <- rtracklayer::import("NC_009004_with_sRNA.gff")
+
+mcols(gff) <- mcols(gff)[, c("ID", "Name", "gene", "gene_biotype", "locus_tag", "old_locus_tag", "Ontology_term", "product")]
+geneTable <- gff[!is.na(mcols(gff)$gene_biotype) | grepl("sRNA", mcols(gff)$locus_tag) ] %>% 
+  as.data.table() %>% 
+  .[, .(ID, Name, gene, gene_biotype, locus_tag, old_locus_tag)]
+geneTable <- merge(geneTable, gff[is.na(mcols(gff)$gene_biotype)] %>% 
+    .[, c("locus_tag", "product")] %>% 
+    as.data.table() %>% 
+    .[, c("locus_tag", "product")] %>% unique) %>% 
+  .[!(gene_biotype %in% c("rRNA", "tRNA")), ]
+geneTable <- geneTable[grepl("sRNA", locus_tag), gene_biotype := "sRNA"] %>% 
+  .[grepl("sRNA", locus_tag), old_locus_tag := locus_tag ]  
+ribo <-  gff[mcols(gff)$gene_biotype %in% c("rRNA", "tRNA"), ]
+```
+
+```{r}
+refas <- "pVE3916"
+tipas <- "sLLM1042"
+samplesInfo <- fread("input/samples_info.txt") %>% .[type %in% c(refas, tipas)]
+samplesInfo$type <- factor(samplesInfo$type, levels=c(refas, tipas))
+samplesInfo$group <- samplesInfo$type
+samples2do <- samplesInfo$Barcode
+
+wdir <- # path to stringtie results 
+files <- paste0(wdir, samples2do, "/t_data.ctab")
+names(files) <- samples2do
+tmp <- read_tsv(files[1])
+tx2txt <- tmp[, c("t_name", "t_name")] %>% setnames(., c("t_name", "gene_name"))
+tx2txt$gene_name <- gsub("gene-", "", tx2txt$gene_name) %>% gsub("rna-", "", .) 
+txi <- tximport(files, type = "stringtie", tx2gene = tx2txt)
+## Removing Ribosomes genes 
+i <- rownames(txi[[1]]) %in% gsub("gene-", "", mcols(ribo)$ID)
+
+txi[[1]] <- txi[[1]][!i, ]
+txi[[2]] <- txi[[2]][!i, ]
+txi[[3]] <- txi[[3]][!i, ]
+
+i <- grepl("sRNA", rownames(txi[[1]]))
+
+txi[[1]] <- txi[[1]][!i, ]
+txi[[2]] <- txi[[2]][!i, ]
+txi[[3]] <- txi[[3]][!i, ]
+
+cts <- txi$counts
+normMat <- txi$length
+
+# Obtaining per-observation scaling factors for length, adjusted to avoid
+# changing the magnitude of the counts.
+normMat <- normMat/exp(rowMeans(log(normMat)))
+normCts <- cts/normMat
+
+# Computing effective library sizes from scaled counts, to account for
+# composition biases between samples.
+library(edgeR)
+eff.lib <- calcNormFactors(normCts) * colSums(normCts)
+
+# Combining effective library sizes with the length factors, and calculating
+# offsets for a log-link GLM.
+normMat <- sweep(normMat, 2, eff.lib, "*")
+normMat <- log(normMat)
+
+# Creating a DGEList object for use in edgeR.
+y <- DGEList(cts)
+y <- scaleOffset(y, normMat)
+
+# filtering using the design information
+design <- model.matrix(~group, data = samplesInfo)
+keep <- filterByExpr(y, design, keep.lib.sizes=TRUE)#, min.count=50, min.total.count=100)
+table(keep)
+y <- y[keep, ]
+y <- estimateDisp(y, design, robust=FALSE)
+fit <- glmQLFit(y, design, robust=FALSE)
+qlf <- glmQLFTest(fit)
+is.de <- decideTests(qlf, p.value=pval, lfc=log2(FC))
+summary(is.de)
+rez <- topTags(qlf, n=Inf) %>% as.data.table(., keep.rownames=TRUE)
+res_dt <- topTags(qlf, n=Inf) %>% 
+  as.data.table(., keep.rownames=TRUE)
+colnames(res_dt) <- gsub("table.", "", colnames(res_dt))
+signi <- rez[(table.FDR <= pval) & (abs(table.logFC) >= log2(FC)), ]
+colnames(signi) <- gsub("table.", "", colnames(signi))
+```
+
+
+```{r}
+d <- res_dt %>% 
+  .[, .(rn, logFC)] %>% .[!is.na(logFC), ] %>% 
+  merge(., geneTable[, .(locus_tag, old_locus_tag)], by.x="rn", by.y="locus_tag") %>% 
+  .[, .(old_locus_tag, logFC)] %>% 
+  .[!is.na(old_locus_tag), ]
+x <- d$logFC
+names(x) <- d$old_locus_tag
+
+kk2 <- gseKEGG(geneList     = sort(x, decreasing=TRUE),
+              organism     = 'llm',
+              minGSSize    = 10,
+              pvalueCutoff = 0.15,
+              maxGSSize    = 400,
+              verbose      = FALSE)
+dotplot(kk2)
+
+d <- signi %>% 
+  .[, .(rn, logFC)] %>% .[!is.na(logFC), ] %>% 
+  merge(., geneTable[, .(locus_tag, old_locus_tag)], by.x="rn", by.y="locus_tag") %>% 
+  .[, .(old_locus_tag, logFC)] %>% 
+  .[!is.na(old_locus_tag), ]
+x <- d$logFC
+names(x) <- d$old_locus_tag
+
+kk1 <- enrichKEGG(gene     = names(x),
+              organism     = 'llm',
+              pvalueCutoff = 0.15,
+              pAdjustMethod = "BH")
+
+dotplot(kk1)
+
+countai <-  cpm(y, log = TRUE, prior.count = 1)
+
+saveRDS(kk2, paste0(outdatadir, "KEGG_GSEA.RDS"))
+saveRDS(countai, paste0(outdatadir, "countaiNorn.RDS"))
+saveRDS(signi, paste0(outdatadir, "significant.RDS"))
+saveRDS(res_dt, paste0(outdatadir, "results.RDS"))
+```

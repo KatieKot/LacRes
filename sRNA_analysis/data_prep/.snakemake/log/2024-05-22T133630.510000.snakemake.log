@@ -1,0 +1,106 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 30
+Rules claiming more threads will be scaled down.
+Job stats:
+job             count    min threads    max threads
+------------  -------  -------------  -------------
+all                 1              1              1
+dedup_normal        7             10             10
+quantify            1             10             10
+total               9              1             10
+
+Select jobs to execute...
+
+[Wed May 22 13:36:30 2024]
+rule dedup_normal:
+    input: output/PnG_1/PnG_1.bam
+    output: output/PnG_1/Norm_dedup_PnG_1.bam
+    log: logs/PnG_1/Norm_dedup.log
+    jobid: 95
+    reason: Missing output files: output/PnG_1/Norm_dedup_PnG_1.bam
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Wed May 22 13:36:30 2024]
+rule dedup_normal:
+    input: output/Lys_2/Lys_2.bam
+    output: output/Lys_2/Norm_dedup_Lys_2.bam
+    log: logs/Lys_2/Norm_dedup.log
+    jobid: 98
+    reason: Missing output files: output/Lys_2/Norm_dedup_Lys_2.bam
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Wed May 22 13:36:30 2024]
+rule dedup_normal:
+    input: output/FivePoints_1/FivePoints_1.bam
+    output: output/FivePoints_1/Norm_dedup_FivePoints_1.bam
+    log: logs/FivePoints_1/Norm_dedup.log
+    jobid: 99
+    reason: Missing output files: output/FivePoints_1/Norm_dedup_FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Wed May 22 14:01:23 2024]
+Error in rule dedup_normal:
+    jobid: 98
+    input: output/Lys_2/Lys_2.bam
+    output: output/Lys_2/Norm_dedup_Lys_2.bam
+    log: logs/Lys_2/Norm_dedup.log (check log file(s) for error details)
+    shell:
+        
+        samtools sort -@ 10 output/Lys_2/Lys_2.bam > output/Lys_2/sorted.bam
+        samtools index output/Lys_2/sorted.bam
+        umi_tools dedup --method=unique -I output/Lys_2/sorted.bam --log=logs/Lys_2/Norm_dedup.log  output/Lys_2_Norm_header.txt --paired --output-stats=output/Lys_2/Norm_dedup -S output/Lys_2/Norm_dedup_Lys_2.bam
+        rm output/Lys_2/sorted.bam
+        output/Lys_2/sorted.bam.bai
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job dedup_normal since they might be corrupted:
+output/Lys_2/Norm_dedup_Lys_2.bam
+[Wed May 22 14:01:41 2024]
+Error in rule dedup_normal:
+    jobid: 95
+    input: output/PnG_1/PnG_1.bam
+    output: output/PnG_1/Norm_dedup_PnG_1.bam
+    log: logs/PnG_1/Norm_dedup.log (check log file(s) for error details)
+    shell:
+        
+        samtools sort -@ 10 output/PnG_1/PnG_1.bam > output/PnG_1/sorted.bam
+        samtools index output/PnG_1/sorted.bam
+        umi_tools dedup --method=unique -I output/PnG_1/sorted.bam --log=logs/PnG_1/Norm_dedup.log  output/PnG_1_Norm_header.txt --paired --output-stats=output/PnG_1/Norm_dedup -S output/PnG_1/Norm_dedup_PnG_1.bam
+        rm output/PnG_1/sorted.bam
+        output/PnG_1/sorted.bam.bai
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job dedup_normal since they might be corrupted:
+output/PnG_1/Norm_dedup_PnG_1.bam
+[Wed May 22 14:05:08 2024]
+Error in rule dedup_normal:
+    jobid: 99
+    input: output/FivePoints_1/FivePoints_1.bam
+    output: output/FivePoints_1/Norm_dedup_FivePoints_1.bam
+    log: logs/FivePoints_1/Norm_dedup.log (check log file(s) for error details)
+    shell:
+        
+        samtools sort -@ 10 output/FivePoints_1/FivePoints_1.bam > output/FivePoints_1/sorted.bam
+        samtools index output/FivePoints_1/sorted.bam
+        umi_tools dedup --method=unique -I output/FivePoints_1/sorted.bam --log=logs/FivePoints_1/Norm_dedup.log  output/FivePoints_1_Norm_header.txt --paired --output-stats=output/FivePoints_1/Norm_dedup -S output/FivePoints_1/Norm_dedup_FivePoints_1.bam
+        rm output/FivePoints_1/sorted.bam
+        output/FivePoints_1/sorted.bam.bai
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job dedup_normal since they might be corrupted:
+output/FivePoints_1/Norm_dedup_FivePoints_1.bam
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: ../../../../../scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/.snakemake/log/2024-05-22T133630.510000.snakemake.log

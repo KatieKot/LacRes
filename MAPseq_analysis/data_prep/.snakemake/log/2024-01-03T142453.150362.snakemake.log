@@ -1,0 +1,119 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 36
+Rules claiming more threads will be scaled down.
+Job stats:
+job                        count    min threads    max threads
+-----------------------  -------  -------------  -------------
+all                            1              1              1
+do_fastqc                      6              3              3
+make_deep_bins_notDedup        1             30             30
+map_data_hisat2                6             20             20
+total                         14              1             30
+
+Select jobs to execute...
+
+[Wed Jan  3 14:24:53 2024]
+rule do_fastqc:
+    input: output/Sample_R1/00_Sample_R1_R1.fq.gz, output/Sample_R1/00_Sample_R1_R2.fq.gz, output/Sample_R1/01_Sample_R1_val_1.fq.gz, output/Sample_R1/01_Sample_R1_val_2.fq.gz
+    output: output/Sample_R1/00_Sample_R1_R1_fastqc.html, output/Sample_R1/Sample_R1_val_2_fastqc.html
+    jobid: 22
+    reason: Missing output files: output/Sample_R1/Sample_R1_val_2_fastqc.html
+    wildcards: sample=Sample_R1
+    threads: 3
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 14:24:53 2024]
+rule do_fastqc:
+    input: output/Sample_R3/00_Sample_R3_R1.fq.gz, output/Sample_R3/00_Sample_R3_R2.fq.gz, output/Sample_R3/01_Sample_R3_val_1.fq.gz, output/Sample_R3/01_Sample_R3_val_2.fq.gz
+    output: output/Sample_R3/00_Sample_R3_R1_fastqc.html, output/Sample_R3/Sample_R3_val_2_fastqc.html
+    jobid: 24
+    reason: Missing output files: output/Sample_R3/Sample_R3_val_2_fastqc.html
+    wildcards: sample=Sample_R3
+    threads: 3
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 14:24:53 2024]
+rule do_fastqc:
+    input: output/Control_R1/00_Control_R1_R1.fq.gz, output/Control_R1/00_Control_R1_R2.fq.gz, output/Control_R1/01_Control_R1_val_1.fq.gz, output/Control_R1/01_Control_R1_val_2.fq.gz
+    output: output/Control_R1/00_Control_R1_R1_fastqc.html, output/Control_R1/Control_R1_val_2_fastqc.html
+    jobid: 19
+    reason: Missing output files: output/Control_R1/Control_R1_val_2_fastqc.html
+    wildcards: sample=Control_R1
+    threads: 3
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 14:24:53 2024]
+rule do_fastqc:
+    input: output/Control_R3/00_Control_R3_R1.fq.gz, output/Control_R3/00_Control_R3_R2.fq.gz, output/Control_R3/01_Control_R3_val_1.fq.gz, output/Control_R3/01_Control_R3_val_2.fq.gz
+    output: output/Control_R3/00_Control_R3_R1_fastqc.html, output/Control_R3/Control_R3_val_2_fastqc.html
+    jobid: 21
+    reason: Missing output files: output/Control_R3/Control_R3_val_2_fastqc.html
+    wildcards: sample=Control_R3
+    threads: 3
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 14:24:53 2024]
+rule do_fastqc:
+    input: output/Sample_R2/00_Sample_R2_R1.fq.gz, output/Sample_R2/00_Sample_R2_R2.fq.gz, output/Sample_R2/01_Sample_R2_val_1.fq.gz, output/Sample_R2/01_Sample_R2_val_2.fq.gz
+    output: output/Sample_R2/00_Sample_R2_R1_fastqc.html, output/Sample_R2/Sample_R2_val_2_fastqc.html
+    jobid: 23
+    reason: Missing output files: output/Sample_R2/Sample_R2_val_2_fastqc.html
+    wildcards: sample=Sample_R2
+    threads: 3
+    resources: tmpdir=/tmp
+
+
+[Wed Jan  3 14:24:53 2024]
+rule do_fastqc:
+    input: output/Control_R2/00_Control_R2_R1.fq.gz, output/Control_R2/00_Control_R2_R2.fq.gz, output/Control_R2/01_Control_R2_val_1.fq.gz, output/Control_R2/01_Control_R2_val_2.fq.gz
+    output: output/Control_R2/00_Control_R2_R1_fastqc.html, output/Control_R2/Control_R2_val_2_fastqc.html
+    jobid: 20
+    reason: Missing output files: output/Control_R2/Control_R2_val_2_fastqc.html
+    wildcards: sample=Control_R2
+    threads: 3
+    resources: tmpdir=/tmp
+
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule do_fastqc in file /scratch/kotryna/Giedrius/2024_GRIL/data_prep/Snakefile, line 154:
+Job 23  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/Sample_R2/Sample_R2_val_2_fastqc.html
+Removing output files of failed job do_fastqc since they might be corrupted:
+output/Sample_R2/00_Sample_R2_R1_fastqc.html
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule do_fastqc in file /scratch/kotryna/Giedrius/2024_GRIL/data_prep/Snakefile, line 154:
+Job 24  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/Sample_R3/Sample_R3_val_2_fastqc.html
+Removing output files of failed job do_fastqc since they might be corrupted:
+output/Sample_R3/00_Sample_R3_R1_fastqc.html
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule do_fastqc in file /scratch/kotryna/Giedrius/2024_GRIL/data_prep/Snakefile, line 154:
+Job 19  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/Control_R1/Control_R1_val_2_fastqc.html
+Removing output files of failed job do_fastqc since they might be corrupted:
+output/Control_R1/00_Control_R1_R1_fastqc.html
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule do_fastqc in file /scratch/kotryna/Giedrius/2024_GRIL/data_prep/Snakefile, line 154:
+Job 20  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/Control_R2/Control_R2_val_2_fastqc.html
+Removing output files of failed job do_fastqc since they might be corrupted:
+output/Control_R2/00_Control_R2_R1_fastqc.html
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule do_fastqc in file /scratch/kotryna/Giedrius/2024_GRIL/data_prep/Snakefile, line 154:
+Job 22  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/Sample_R1/Sample_R1_val_2_fastqc.html
+Removing output files of failed job do_fastqc since they might be corrupted:
+output/Sample_R1/00_Sample_R1_R1_fastqc.html
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule do_fastqc in file /scratch/kotryna/Giedrius/2024_GRIL/data_prep/Snakefile, line 154:
+Job 21  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+output/Control_R3/Control_R3_val_2_fastqc.html
+Removing output files of failed job do_fastqc since they might be corrupted:
+output/Control_R3/00_Control_R3_R1_fastqc.html
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: ../../../../../scratch/kotryna/Giedrius/2024_GRIL/data_prep/.snakemake/log/2024-01-03T142453.150362.snakemake.log

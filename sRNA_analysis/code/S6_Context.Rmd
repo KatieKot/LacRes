@@ -1,0 +1,323 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr)
+dir.create(outdatadir, recursive = TRUE)
+sRNR <- readRDS("./output/code/FinalTable/all_sRNA.RDS") 
+mcols(sRNR)$short_name <- NULL 
+mcols(sRNR)$sarasas <- NULL 
+klase <- readRDS(paste0("./output/code/DoClassifications/klasifikacija.RDS")) %>% 
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+gff <- readRDS("./output/code/DoClassifications/Mini_anotacija.RDS")
+junk <- function(x) {paste(x, collapse = "; ", sep="_")}
+```
+
+```{r}
+# intragenic
+x <- klase[grepl("intragenic", klase$Class)]
+intrageniniai <- foreach (i=1:length(x), .combine='rbind') %do% {
+  seka <- x[i]
+  ID <- seka$ID
+  ov <- findOverlaps(seka, gff, select="all", ignore.strand=TRUE)
+  pers <- gff[subjectHits(ov)]
+  geneID <- mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  oldLocus <- mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  return(data.frame(sRNR=ID, geneID=geneID, product=product, oldLocus=oldLocus)) 
+}
+
+intrageniniai <- aggregate(intrageniniai[-1], by=list(intrageniniai$sRNR), c) %>% as.data.table
+colnames(intrageniniai) <- paste0("intragenic_", colnames(intrageniniai))
+colnames(intrageniniai)[1] <- "sRNR"
+```
+
+```{r}
+#UTR5
+promotoriai <- promoters(gff, upstream=50, downstream=0)
+x <- klase[grepl("5' UTR", klase$Class)]
+UTR5 <- foreach (i=1:length(x), .combine='rbind') %do% {
+  seka <- x[i]
+  ov <- findOverlaps(seka, promotoriai, select="all", ignore.strand=FALSE)
+  pers <- promotoriai[subjectHits(ov)]
+  geneID <- mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(geneID) == 0) {geneID <- "NA"}
+  ID <- seka$ID
+  product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(product) == 0) {product <- "NA"}
+  oldLocus <- mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(oldLocus) == 0) {oldLocus <- "NA"}
+  return(data.frame(sRNR=ID, geneID=geneID, product=product, oldLocus=oldLocus)) 
+}
+
+UTR5 <- aggregate(UTR5[-1], by=list(UTR5$sRNR), c)  %>% as.data.table
+colnames(UTR5) <- paste0("UTR5_", colnames(UTR5))
+colnames(UTR5)[1] <- "sRNR"
+```
+
+```{r}
+#UTR3
+downai <- resize(gff, fix="end", width=50) %>% 
+  resize(., fix="start", width=100) %>% 
+  resize(., fix="end", width=50) 
+x <- klase[grepl("3' UTR", klase$Class)]
+UTR3 <- foreach (i=1:length(x), .combine='rbind') %do% {
+  seka <- x[i]
+  ov <- findOverlaps(seka, downai, select="all", ignore.strand=FALSE)
+  pers <- downai[subjectHits(ov)]
+  geneID <- mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(geneID) == 0) {geneID <- "NA"}
+  ID <- seka$ID
+product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(product) == 0) {product <- "NA"}
+  oldLocus <-  mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(oldLocus) == 0) {oldLocus <- "NA"}
+  return(data.frame(sRNR=ID, geneID=geneID, product=product, oldLocus=oldLocus)) 
+}
+
+UTR3 <- aggregate(UTR3[-1], by=list(UTR3$sRNR), c)  %>% as.data.table
+colnames(UTR3) <- paste0("UTR3_", colnames(UTR3))
+colnames(UTR3)[1] <- "sRNR"
+```
+
+```{r}
+#intergenic
+x <- klase[grepl("intergenic", klase$Class)]
+x <- x[strand(x) == "-", ]
+intergenic <- foreach (i=1:length(x), .combine='rbind') %do% {
+  seka <- x[i]
+  ID <- seka$ID
+
+  ov <- precede(seka, downai, ignore.strand=TRUE)
+  pers <- downai[(ov)]
+  up_geneID <- mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(up_geneID) == 0) {up_geneID <- "NA"}
+  up_product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(up_product) == 0) {up_product <- "NA"}
+  up_oldLocus <-  mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(up_oldLocus) == 0) {up_oldLocus <- "NA"}
+  
+  ov <- follow(seka, downai, ignore.strand=TRUE)
+  pers <- downai[(ov)]
+  down_geneID <-  mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(down_geneID) == 0) {down_geneID <- "NA"}
+  down_product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(down_product) == 0) {down_product <- "NA"}
+  down_oldLocus <- mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(down_oldLocus) == 0) {down_oldLocus <- "NA"}
+   
+  return(data.frame(down_sRNR=ID, down_geneID=down_geneID, down_product=down_product, down_oldLocus=down_oldLocus,
+                    up_sRNR=ID, up_geneID=up_geneID, up_product=up_product, up_oldLocus=up_oldLocus)) 
+}
+
+intergenic_minusai <- aggregate(intergenic[-1], by=list(intergenic$down_sRNR), c)  %>% as.data.table
+
+colnames(intergenic_minusai) <- paste0("intergenic_", colnames(intergenic_minusai))
+colnames(intergenic_minusai)[1] <- "sRNR"
+
+
+x <- klase[grepl("intergenic", klase$Class)]
+x <- x[strand(x) == "+", ]
+intergenic <- foreach (i=1:length(x), .combine='rbind') %do% {
+  seka <- x[i]
+  ID <- seka$ID
+
+  ov <- follow(seka, downai, ignore.strand=TRUE)
+  pers <- downai[(ov)]
+  up_geneID <- mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(up_geneID) == 0) {up_geneID <- "NA"}
+  up_product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(up_product) == 0) {up_product <- "NA"}
+  up_oldLocus <-  mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(up_oldLocus) == 0) {up_oldLocus <- "NA"}
+  
+  ov <- precede(seka, downai, ignore.strand=TRUE)
+  pers <- downai[(ov)]
+  down_geneID <-  mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(down_geneID) == 0) {down_geneID <- "NA"}
+  down_product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(down_product) == 0) {down_product <- "NA"}
+  down_oldLocus <- mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(down_oldLocus) == 0) {down_oldLocus <- "NA"}
+   
+  return(data.frame(down_sRNR=ID, down_geneID=down_geneID, down_product=down_product, down_oldLocus=down_oldLocus,
+                    up_sRNR=ID, up_geneID=up_geneID, up_product=up_product, up_oldLocus=up_oldLocus)) 
+}
+
+intergenic_pliusai <- aggregate(intergenic[-1], by=list(intergenic$down_sRNR), c)  %>% as.data.table
+
+colnames(intergenic_pliusai) <- paste0("intergenic_", colnames(intergenic_pliusai))
+colnames(intergenic_pliusai)[1] <- "sRNR"
+
+
+intergenic <- rbind(intergenic_pliusai, intergenic_minusai)
+```
+
+```{r}
+#antisence
+x <- klase[grepl("antisence", klase$Class)]
+sRNR_anti <- as.data.table(x) %>% 
+  .[, strand := as.character.factor(strand) ] %>% 
+  .[strand == "+", strand := "m"] %>% 
+  .[strand == "-", strand := "p"] %>% 
+  .[strand == "m", strand := "-"] %>%
+  .[strand == "p", strand := "+"] %>%
+  makeGRangesFromDataFrame(., keep.extra.columns=TRUE)
+
+antisence <- foreach (i=1:length(sRNR_anti), .combine='rbind') %do% {
+  seka <- sRNR_anti[i]
+  ov <- findOverlaps(seka, gff, maxgap=50L, select="all", ignore.strand=TRUE)
+  pers <- gff[subjectHits(ov)]
+  geneID <- mcols(pers)$LLMG %>% 
+    as.data.table %>% 
+    setnames(., c("geneID")) %>%
+    .[!is.na(geneID), geneID] %>% 
+    unlist %>% 
+    unique 
+  if (length(geneID) == 0) {geneID <- "NA"}
+  ID <- seka$ID
+  product <- mcols(pers)$product %>% 
+    as.data.table %>% 
+    setnames(., c("product")) %>%
+    .[!is.na(product), product] %>% 
+    unlist %>% 
+    unique %>% 
+    gsub("product=", "", .)
+  if (length(product) == 0) {product <- "NA"}
+  oldLocus <- mcols(pers)$old_locus %>% 
+    as.data.table %>% 
+    setnames(., c("old_locus")) %>%
+    .[!is.na(old_locus), old_locus] %>% 
+    unlist %>% 
+    unique 
+  if (length(oldLocus) == 0) {oldLocus <- "NA"}
+  return(data.frame(sRNR=ID, geneID=geneID, product=product, oldLocus=oldLocus)) 
+}
+tmp <- aggregate(antisence[-1], by=list(antisence$sRNR), c)
+antisence <- foreach(i=names(tmp), .combine='cbind') %do% {
+  sapply(tmp[[i]], junk) %>% as.data.frame
+}
+colnames(antisence) <- names(tmp)
+colnames(antisence)[1] <- "sRNR"
+
+########################## sujungti
+d <- merge(UTR3, UTR5, by="sRNR", all.x=TRUE, all.y=TRUE) %>% 
+  merge(., antisence, by="sRNR", all.x=TRUE, all.y=TRUE) %>%
+  merge(., intrageniniai, by="sRNR", all.x=TRUE, all.y=TRUE) %>%
+  merge(., intergenic, by="sRNR", all.x=TRUE, all.y=TRUE)
+setDT(d)
+setkey(d, "sRNR")
+
+########################## dar reikia "genomic context informacijos, t.y. pliusiuku ir minusiuku 
+saveRDS(d, paste0(outdatadir, "SurrGenes.RDS"))
+```

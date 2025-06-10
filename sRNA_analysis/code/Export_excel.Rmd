@@ -1,0 +1,462 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr, xlsx)
+dir.create(outdatadir, recursive = TRUE)
+```
+
+```{r}
+sRNAs <- readRDS("output/code/FinalTable/all_sRNA.RDS") %>% 
+  as.data.table() %>% 
+  .[, .(ID, start, end, strand, width)] %>% 
+  setnames(., c("ID", "Start", "End", "Strand", "Length (nt)")) %>% 
+  .[]
+klasifikacija <- readRDS("output/code/DoClassifications//klasifikacija.RDS") %>% .[, .(ID, Class)] %>% setnames(., c("ID", "Group"))
+dsRNAs <- merge(sRNAs, klasifikacija) %>% 
+  .[, Group := factor(Group, levels=c("3' UTR", "5' UTR", "5' UTR/3' UTR", "antisence", "antisence/3' UTR", "antisence/5' UTR", "intergenic", "intragenic", "intragenic/3' UTR"), 
+                             labels=c("3' UTR-derivered", "5' UTR-derivered", "3' UTR-derivered/5' UTR-derivered", "antisence", "3'UTR-derivered/antisence", "5'UTR-derivered/antisence", "intergenic", "intragenic", "intragenic/3' UTR"))] 
+
+multilokusai <- readRDS("./output/code/FinalsRNRList/IdenticalsRNAs.RDS")
+raiska <- readRDS("./output/code/GetExpression/cpm_allLibs_edgeR_normalized.RDS") %>% 
+  as.data.table(., keep.rownames=TRUE) %>% 
+  .[, ID := rn] %>% 
+  .[, rn := NULL] %>% 
+  .[!grepl("LLMG", ID), ]
+colnames(raiska) <- paste0("expr_", colnames(raiska))     
+setnames(raiska, "expr_ID", "ID")
+
+samplesInfo <- fread("input/sampleInfo.txt")
+sixSamples <- samplesInfo
+
+multi_motina <- readRDS("./output/code/FinalsRNRList/MultiMotina.RDS")
+multi_vaikai <- readRDS("./output/code/FinalsRNRList/MultiVaikai.RDS")
+
+ID_visi_visi <- dsRNAs$ID
+ID_kairiausi <- dsRNAs$ID[!(dsRNAs$ID %in% multi_vaikai$ID)]
+ID_vaikiniai <- dsRNAs$ID[(dsRNAs$ID %in% multi_vaikai$ID)]
+#ID_multi <- multilokusai
+ID_multi <- ID_vaikiniai  
+```
+
+```{r}
+###############################################################################
+###############################################################################
+################### S2 table 
+###############################################################################
+###############################################################################
+S2 <- readRDS("./output/code/S2_general/S2_table.RDS") 
+ 
+d <- merge(S2, dsRNAs[, .(ID, Group)]) %>% 
+  merge(., raiska, all.x=TRUE) %>% 
+  .[, c("short_name", "Group", "strand", "start", "end", "width", "promoter", "terminator", "context", "rfamID", "LongName", sixSamples$Sample, paste0("startPos_", sixSamples$Sample), paste0("endPos_", sixSamples$Sample), paste0("expr_", sixSamples$Sample), "validation", "ID"), with=FALSE] %>% 
+  setnames(., c("Name", "Group", "Strand", "Start", "End", "Length (nt)", "Promoter", "Terminator", "Genomic context", "Rfam ID", "Rfam description", paste0("exists_in", sixSamples$Sample), paste0("dev_start_", sixSamples$Sample), paste0("dev_end_", sixSamples$Sample), paste0("expr_", sixSamples$Sample), "Verified by Northern blot", "ID")) %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL] 
+
+foreach(j=sixSamples$Sample) %do% {
+  i <- paste0("dev_start_", j)
+  k <- paste0("dev_end_", j)
+  d <- d %>% 
+    .[, eval(i) := as.character(get(i))] %>% 
+    .[get(i) == "0", eval(i) := ""] %>% 
+    .[is.na(get(i)), eval(i) := "-"] %>% 
+    .[, eval(k) := as.character(get(k))] %>% 
+    .[get(k) == "0", eval(k) := ""] %>% 
+    .[is.na(get(k)), eval(k) := "-"] %>% 
+    .[]
+}
+
+newnames <- c("Name", "Group", "Strand", "Start", "End", "Length (nt)", "Promoter", "Terminator", "Genomic context", "Rfam ID", "Rfam name", "Presence in Lys 1", "Presence in Lys 2", "Presence in PnG 1", "Presence in PnG 2", "Presence in Control 1", "Presence in Control 2", "Presence in FivePoints", "Deviation at 5' end Lys 1", "Deviation at 5' end Lys 2", "Deviation at 5' end PnG 1", "Deviation at 5' end PnG 2", "Deviation at 5' end Control 1", "Deviation at 5' end Control 2", "Deviation at 5' end FivePoints 1", "Deviation at 3' end Lys 1", "Deviation at 3' end Lys 2", "Deviation at 3' end PnG 1", "Deviation at 3' end PnG 2", "Deviation at 3' end Control 1", "Deviation at 3' end Control 2", "Deviation at 3' end FivePoints 1", "Expression Lys 1", "Expression Lys 2", "Expression PnG 1", "Expression PnG 2", "Expression Control 1", "Expression Control 2", "Expression FivePoints 1", "Verified by Northern blot")
+
+toWrite <- as.data.table(d) %>% 
+  .[ID %in% ID_kairiausi, ] %>%  
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)] %>% 
+  setkey(., "Start") %>% 
+  setnames(., newnames) 
+
+tmp <- toWrite[1:4, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S2",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = FALSE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+```{r}
+###############################################################################
+###############################################################################
+################### S3 table 
+###############################################################################
+###############################################################################
+toWrite <- d %>%  
+  .[ID %in% ID_multi, ] %>% 
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)] %>% 
+  setkey(., "Start") %>% 
+  setnames(., newnames) 
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S3",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+
+```
+
+```{r}
+
+###############################################################################
+###############################################################################
+################### S4 table 
+###############################################################################
+###############################################################################
+S4 <- readRDS("./output/code/S4_Promoters/S4_promoters.RDS") %>% 
+  .[, `:=` (Name = NULL)] %>%
+  merge(., dsRNAs[, .(ID, Group)]) %>% 
+  merge(., S2[, .(ID, short_name)]) %>% 
+  .[, .(short_name, Group, strand, start, end, dist2prom_bprom, start_box10, box_10_seq, box_10_score, start_box_35, box_35_seq, box_35_score, PromoTech_score, PromoTech_sequence, dist2prom_PromTech)] %>% 
+  setnames(., c("Name", "Group", "Strand", "Start", "End", "Distance between -10 box and sRNA", "-10 box start", "-10 box (5'-> 3')", "-10 box score", 
+                "-35 box start", "-35 box (5' -> 3')", "-35 box score", "PromoTech_score", "PromoTech_sequence", "dist2prom_PromTech")) %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL] %>%      
+  setkey(., "Start")                
+
+toWrite <- as.data.table(S4) %>%  
+  .[, ID := NULL] %>%  
+  .[, Name := paste0("sLLM:", Name)]
+
+tmp <- toWrite[1:4, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S4",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+
+```{r}
+###############################################################################
+###############################################################################
+################### S5 table 
+###############################################################################
+###############################################################################
+S5 <- readRDS("./output/code/S5_Terminators/S5_terminators.RDS") %>% 
+  .[, ID := Name] %>% 
+  .[, Name := NULL] %>% 
+  merge(., dsRNAs[, .(ID, Group)]) %>% 
+  merge(., S2[, .(ID, short_name)]) %>% 
+  .[, .(short_name, Group, strand, start, end, start_termPred, end_termPred, seq, start_term, end_term, program_term, seq_term, ID)] %>% 
+  setnames(., c("Name", "Group", "Strand", "Start", "End", "FindTerm terminator start", "FindTerm terminator end", "FindTerm terminator sequence", 
+               "ARNold terminator start", "ARNold terminator end", "ARNold terminator prediction program", "ARNold terminator sequence", "ID")) %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL]  %>% 
+  setkey(., "Start") 
+
+toWrite <- as.data.table(S5) %>% 
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM:", Name)]
+
+tmp <- toWrite[1:4, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S5",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+```{r}
+###############################################################################
+###############################################################################
+################### S6 table 
+###############################################################################
+###############################################################################
+S6 <- readRDS("./output/code/S6_Context/SurrGenes.RDS") %>% 
+  setnames("sRNR", "ID") %>% 
+  merge(S2[, .(short_name, ID, start, end, width, strand, context)], .) %>%
+  merge(dsRNAs[, .(ID, Group)], .) %>% 
+  .[, .(ID, short_name, Group, start, end, width, strand, context,  intergenic_up_geneID, intergenic_up_product, intergenic_up_oldLocus, 
+  intergenic_down_geneID, intergenic_down_product, intergenic_down_oldLocus, geneID, product, oldLocus, 
+  UTR3_geneID, UTR3_product, UTR3_oldLocus, UTR5_geneID, UTR5_product, UTR5_oldLocus, 
+  intragenic_geneID, intragenic_product, intragenic_oldLocus)] %>% 
+  setnames(., "intergenic_up_geneID", "5' flanking gene, ID") %>% 
+  setnames(., "intergenic_up_product", "5' flanking gene, product") %>% 
+  #setnames(., "intergenic_up_oldLocus", "5' flanking gene, old locus ID") %>%
+  setnames(., "intergenic_down_geneID", "3' flanking gene, ID") %>% 
+  setnames(., "intergenic_down_product", "3' flanking gene, product") %>% 
+  #setnames(., "intergenic_down_oldLocus", "3' flanking gene, old locus ID") %>%
+  setnames(., "intragenic_geneID", "Paternal gene, ID") %>% 
+  setnames(., "intragenic_product", "Paternal gene, product") %>% 
+  #setnames(., "intragenic_oldLocus", "Paternal gene, old locus ID") %>%
+  setnames(., "geneID", "Sense gene, ID") %>% 
+  setnames(., "product", "Sense gene, product") %>% 
+  #setnames(., "oldLocus", "Sense gene, old locus ID") %>%
+  .[, tmp_ID := paste0(UTR3_geneID, ";", UTR5_geneID)] %>% 
+  .[, tmp_pro := paste0(UTR3_product, ";", UTR5_product)] %>% 
+  .[, tmp_old := paste0(UTR3_oldLocus, ";", UTR5_oldLocus)] %>% 
+  setnames(., "tmp_ID",  "Gene at 5' or 3' end, ID") %>% 
+  setnames(., "tmp_pro",  "Gene at 5' or 3' end, product") %>% 
+  #setnames(., "tmp_old",  "Gene at 5' or 3' end, old locus ID") %>% 
+  .[, `:=` (UTR3_geneID = NULL, UTR5_geneID = NULL, UTR3_product = NULL, UTR5_product = NULL, UTR3_oldLocus = NULL, UTR5_oldLocus = NULL)] %>% 
+  setnames(., "short_name", "Name") %>% 
+  setnames(., "start", "Start") %>% 
+  setnames(., "end", "End") %>% 
+  setnames(., "strand", "Strand") %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL] %>% 
+  .[, Strand := NULL] %>% 
+  .[, ]
+
+S6 <- apply(S6, 2, function(x) {gsub("NA;", "", x) %>% gsub("NA", "", .)}) 
+
+toWrite <- as.data.table(S6) %>% 
+  .[ID %in% ID_kairiausi, ] %>% 
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)] %>% 
+  setkey(., "Start")
+
+tmp <- toWrite[1:3, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S6",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+```{r}
+###############################################################################
+###############################################################################
+################### S7 table 
+###############################################################################
+###############################################################################
+toWrite <- as.data.table(S6) %>% 
+  .[ID %in% ID_multi, ]  %>% 
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)] %>% 
+#  .[strand == "-", tmp := Start] %>% 
+#  .[strand == "-", Start := End] %>% 
+#  .[strand == "-", End := tmp] %>%
+#  .[, tmp := NULL] %>% 
+  setkey(., "Start")
+
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S7",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+
+```{r}
+###############################################################################
+###############################################################################
+################### S8 table 
+###############################################################################
+###############################################################################
+S8 <- readRDS("./output/code/S8_ViennaRNA/ViennaStructures.RDS") 
+
+d <- merge(S8, dsRNAs[, .(ID, Group)]) %>% 
+     merge(., S2[, .(ID, short_name)]) %>% 
+    .[, .(short_name, Group, strand, start, end, seka, structure, energy, free_3_end, free_5_end, ID)] %>% 
+    setnames(., c("Name", "Group", "Strand", "Start", "End", "Sequence (5'-> 3')", "Structure", "Minimum free energy", "#free nt at the 3'end", "#free nt at the 5'end", "ID")) %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL] %>% 
+  setkey(., "Start")  
+
+
+toWrite <-  as.data.table(d) %>% 
+  .[ID %in% ID_kairiausi, ] %>%  
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)]
+
+tmp <- toWrite[1:3, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S8",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+
+```{r}
+###############################################################################
+###############################################################################
+################### S9 table 
+###############################################################################
+###############################################################################
+S9 <- readRDS("./output/code/FinalTable/S9_panasumai.RDS") %>% 
+  setnames("V1", "ID") %>% 
+  .[, ID := gsub("p", "+", ID)] %>% 
+  .[, ID := gsub("n", "-", ID)] 
+
+tvarka <- colnames(S9)[-1] %>% .[order(-colMeans(S9[, -1]))]
+
+poros <- c("NC_017949.1"="Lactococcus cremoris subsp. cremoris NZ9000", "AP018499.1"="Lactococcus lactis subsp. cremoris C4",  "NC_008527.1"="Lactococcus cremoris subsp. cremoris SK11", "NC_017492.1"="Lactococcus cremoris subsp. cremoris A76", "NC_022369.1"="Lactococcus cremoris subsp. cremoris KW2", "NC_019435.1"="Lactococcus cremoris subsp. cremoris UC509.9", "NC_017486.1"="Lactococcus lactis subsp. lactis CV56", "CP006766.1"="Lactococcus lactis subsp. lactis KLDS 4.0325",  "AE005176.1"="Lactococcus lactis subsp. lactis Il1403",  "AP012281.1"="Lactococcus lactis subsp. lactis IO-1") 
+
+d <- merge(S9, S2[, .(ID, short_name, strand, start, end)])  %>% 
+  merge(., dsRNAs[, .(ID, Group)]) %>% 
+  .[, c("short_name", "Group", "strand", "start", "end", tvarka, "ID"), with=FALSE] %>% 
+  setnames(., c("Name", "Group", "Strand", "Start", "End", poros[tvarka], "ID")) %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL]  
+
+d[d==0] <- NA
+
+toWrite <- as.data.table(d) %>% 
+  .[ID %in% ID_kairiausi, ] %>% 
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)] %>% 
+  setkey(., "Start")
+
+tmp <- toWrite[1:3, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S9",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+```{r}
+###############################################################################
+###############################################################################
+################### S10 table 
+###############################################################################
+###############################################################################
+S10 <- readRDS("./output/code/S10_Olandai/S10_olandai.RDS") 
+
+d <- merge(S10, dsRNAs[, .(ID, Group)]) %>% 
+     merge(., S2[, .(ID, start, end, strand, short_name)]) %>% 
+    .[, .(short_name, Group, strand, start, end, Olandu_ID, ID)] %>% 
+    setnames(., c("Name", "Group", "Strand", "Start", "End", "Olandu ID", "ID")) %>% 
+  .[Strand == "-", tmp := Start] %>% 
+  .[Strand == "-", Start := End] %>% 
+  .[Strand == "-", End := tmp] %>%
+  .[, tmp := NULL] %>% 
+  setkey(., "Start")
+
+toWrite <- as.data.table(d) %>% 
+  .[, ID := NULL] %>% 
+  .[, Name := paste0("sLLM", Name)]
+
+tmp <- toWrite[1:3, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S10",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```
+
+```{r}
+###############################################################################
+###############################################################################
+################### S11 table 
+###############################################################################
+###############################################################################
+S11 <- readRDS("output/code/DGE/DEG_LYS.RDS") %>% 
+  .[, .(short_name, FDR_NEW, logFC, V1)] %>% 
+  setnames(., c("Name", "FDR_LYS", "logFC_LYS", "ID")) %>% 
+  .[, Name := gsub(":", "", Name)]
+S12 <- readRDS("output/code/DGE/DEG_PNG.RDS") %>% 
+  .[, .(short_name, FDR_NEW, logFC, V1)] %>% 
+  setnames(., c("Name", "FDR_PNG", "logFC_PNG", "ID")) %>% 
+  .[, Name := NULL]
+
+dDEG <- merge(S11, S12)
+
+toWrite <- merge(S2[, .(ID, short_name, start, end, strand, width)], dsRNAs[, .(ID, Group)]) %>% 
+  .[, ID := NULL] %>% 
+  .[, short_name := paste0("sLLM", short_name)] %>% 
+  merge(dDEG, ., by.x="Name", by.y="short_name") %>% 
+  .[, ID := NULL] %>% 
+  .[, .(Name, Group, strand, start, end, width, logFC_LYS, FDR_LYS, logFC_PNG, FDR_PNG)] %>% 
+  .[strand == "-", tmp := start] %>% 
+  .[strand == "-", start := end] %>% 
+  .[strand == "-", end := tmp] %>%
+  .[, tmp := NULL] %>% 
+  setkey(., "start") 
+
+tmp <- toWrite[1:4, ]
+tmp <- tmp[, names(tmp) := lapply(.SD, function(x) NA)]
+
+write.xlsx(
+      rbind(tmp, toWrite),
+      paste0(outdatadir, "SupTables.xlsx"),
+      sheetName = "Table S11",
+      col.names = FALSE,
+      row.names = FALSE,
+      append = TRUE,
+      showNA = TRUE,
+      password = NULL
+)
+```

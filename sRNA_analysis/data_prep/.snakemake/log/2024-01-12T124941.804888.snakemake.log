@@ -1,0 +1,751 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 24
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count    min threads    max threads
+---------------  -------  -------------  -------------
+all                    1              1              1
+dedup_data             7             10             10
+do_fastqc              7              4              4
+extend_reads           7              6              6
+map_data_hisat2        7             10             10
+move1N                 7              5              5
+move_left              7              1              1
+noHils_reads_83        7             16             16
+noHils_reads_99        7             16             16
+remap                  7             10             10
+seqpurge               7              6              6
+split_strands          7              6              6
+umi_extract            7              2              2
+total                 85              1             16
+
+Select jobs to execute...
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/Control_1/00_Control_1_R1.fastq.gz, output/Control_1/00_Control_1_R2.fastq.gz
+    output: output/Control_1/01_Control_1_R1.fastq.gz, output/Control_1/01_Control_1_R2.fastq.gz
+    log: logs/Control_1_umi_extract.log
+    jobid: 7
+    reason: Forced execution
+    wildcards: sample=Control_1
+    threads: 2
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/Lys_1/00_Lys_1_R1.fastq.gz, output/Lys_1/00_Lys_1_R2.fastq.gz
+    output: output/Lys_1/01_Lys_1_R1.fastq.gz, output/Lys_1/01_Lys_1_R2.fastq.gz
+    log: logs/Lys_1_umi_extract.log
+    jobid: 43
+    reason: Forced execution
+    wildcards: sample=Lys_1
+    threads: 2
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/PnG_2/00_PnG_2_R1.fastq.gz, output/PnG_2/00_PnG_2_R2.fastq.gz
+    output: output/PnG_2/01_PnG_2_R1.fastq.gz, output/PnG_2/01_PnG_2_R2.fastq.gz
+    log: logs/PnG_2_umi_extract.log
+    jobid: 34
+    reason: Forced execution
+    wildcards: sample=PnG_2
+    threads: 2
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/PnG_1/00_PnG_1_R1.fastq.gz, output/PnG_1/00_PnG_1_R2.fastq.gz
+    output: output/PnG_1/01_PnG_1_R1.fastq.gz, output/PnG_1/01_PnG_1_R2.fastq.gz
+    log: logs/PnG_1_umi_extract.log
+    jobid: 25
+    reason: Forced execution
+    wildcards: sample=PnG_1
+    threads: 2
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/Control_2/00_Control_2_R1.fastq.gz, output/Control_2/00_Control_2_R2.fastq.gz
+    output: output/Control_2/01_Control_2_R1.fastq.gz, output/Control_2/01_Control_2_R2.fastq.gz
+    log: logs/Control_2_umi_extract.log
+    jobid: 16
+    reason: Forced execution
+    wildcards: sample=Control_2
+    threads: 2
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/FivePoints_1/00_FivePoints_1_R1.fastq.gz, output/FivePoints_1/00_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/01_FivePoints_1_R1.fastq.gz, output/FivePoints_1/01_FivePoints_1_R2.fastq.gz
+    log: logs/FivePoints_1_umi_extract.log
+    jobid: 61
+    reason: Forced execution
+    wildcards: sample=FivePoints_1
+    threads: 2
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:49:42 2024]
+rule umi_extract:
+    input: output/Lys_2/00_Lys_2_R1.fastq.gz, output/Lys_2/00_Lys_2_R2.fastq.gz
+    output: output/Lys_2/01_Lys_2_R1.fastq.gz, output/Lys_2/01_Lys_2_R2.fastq.gz
+    log: logs/Lys_2_umi_extract.log
+    jobid: 52
+    reason: Forced execution
+    wildcards: sample=Lys_2
+    threads: 2
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:53:58 2024]
+Finished job 43.
+1 of 85 steps (1%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:53:58 2024]
+rule move1N:
+    input: output/Lys_1/01_Lys_1_R2.fastq.gz
+    output: output/Lys_1/02_Lys_1_R2.fastq.gz
+    jobid: 45
+    reason: Missing output files: output/Lys_1/02_Lys_1_R2.fastq.gz; Input files updated by another job: output/Lys_1/01_Lys_1_R2.fastq.gz
+    wildcards: sample=Lys_1
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:54:11 2024]
+Finished job 45.
+2 of 85 steps (2%) done
+Removing temporary output output/Lys_1/01_Lys_1_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:54:11 2024]
+rule seqpurge:
+    input: output/Lys_1/01_Lys_1_R1.fastq.gz, output/Lys_1/02_Lys_1_R2.fastq.gz
+    output: output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    log: logs/Lys_1_seqpurge.log
+    jobid: 42
+    reason: Missing output files: output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz; Input files updated by another job: output/Lys_1/02_Lys_1_R2.fastq.gz, output/Lys_1/01_Lys_1_R1.fastq.gz
+    wildcards: sample=Lys_1
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:54:31 2024]
+Finished job 7.
+3 of 85 steps (4%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:54:31 2024]
+rule move1N:
+    input: output/Control_1/01_Control_1_R2.fastq.gz
+    output: output/Control_1/02_Control_1_R2.fastq.gz
+    jobid: 9
+    reason: Missing output files: output/Control_1/02_Control_1_R2.fastq.gz; Input files updated by another job: output/Control_1/01_Control_1_R2.fastq.gz
+    wildcards: sample=Control_1
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:54:34 2024]
+Finished job 42.
+4 of 85 steps (5%) done
+Removing temporary output output/Lys_1/01_Lys_1_R1.fastq.gz.
+Removing temporary output output/Lys_1/02_Lys_1_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:54:34 2024]
+rule do_fastqc:
+    input: output/Lys_1/00_Lys_1_R1.fastq.gz, output/Lys_1/00_Lys_1_R2.fastq.gz, output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    output: output/Lys_1/00_Lys_1_R2_fastqc.html, output/Lys_1/03_Lys_1_R2_fastqc.html
+    jobid: 68
+    reason: Input files updated by another job: output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    wildcards: sample=Lys_1
+    threads: 4
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:54:46 2024]
+Finished job 9.
+5 of 85 steps (6%) done
+Removing temporary output output/Control_1/01_Control_1_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:54:46 2024]
+rule seqpurge:
+    input: output/Control_1/01_Control_1_R1.fastq.gz, output/Control_1/02_Control_1_R2.fastq.gz
+    output: output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    log: logs/Control_1_seqpurge.log
+    jobid: 6
+    reason: Missing output files: output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz; Input files updated by another job: output/Control_1/01_Control_1_R1.fastq.gz, output/Control_1/02_Control_1_R2.fastq.gz
+    wildcards: sample=Control_1
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:55:03 2024]
+Finished job 68.
+6 of 85 steps (7%) done
+Removing temporary output output/Lys_1/00_Lys_1_R1.fastq.gz.
+Removing temporary output output/Lys_1/00_Lys_1_R2.fastq.gz.
+Select jobs to execute...
+[Fri Jan 12 12:55:10 2024]
+Finished job 6.
+7 of 85 steps (8%) done
+Removing temporary output output/Control_1/01_Control_1_R1.fastq.gz.
+Removing temporary output output/Control_1/02_Control_1_R2.fastq.gz.
+
+[Fri Jan 12 12:55:10 2024]
+rule do_fastqc:
+    input: output/Control_1/00_Control_1_R1.fastq.gz, output/Control_1/00_Control_1_R2.fastq.gz, output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    output: output/Control_1/00_Control_1_R2_fastqc.html, output/Control_1/03_Control_1_R2_fastqc.html
+    jobid: 64
+    reason: Input files updated by another job: output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    wildcards: sample=Control_1
+    threads: 4
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:55:10 2024]
+rule map_data_hisat2:
+    input: output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    output: output/Control_1/Control_1.bam
+    log: logs/Control_1/hisat2.log
+    jobid: 5
+    reason: Input files updated by another job: output/Control_1/03_Control_1_R1.fastq.gz, output/Control_1/03_Control_1_R2.fastq.gz
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:55:32 2024]
+Finished job 16.
+8 of 85 steps (9%) done
+Select jobs to execute...
+[Fri Jan 12 12:55:41 2024]
+Finished job 64.
+9 of 85 steps (11%) done
+Removing temporary output output/Control_1/00_Control_1_R2.fastq.gz.
+Removing temporary output output/Control_1/00_Control_1_R1.fastq.gz.
+
+[Fri Jan 12 12:55:41 2024]
+rule move1N:
+    input: output/Control_2/01_Control_2_R2.fastq.gz
+    output: output/Control_2/02_Control_2_R2.fastq.gz
+    jobid: 18
+    reason: Missing output files: output/Control_2/02_Control_2_R2.fastq.gz; Input files updated by another job: output/Control_2/01_Control_2_R2.fastq.gz
+    wildcards: sample=Control_2
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:55:57 2024]
+Finished job 18.
+10 of 85 steps (12%) done
+Removing temporary output output/Control_2/01_Control_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:55:57 2024]
+rule seqpurge:
+    input: output/Control_2/01_Control_2_R1.fastq.gz, output/Control_2/02_Control_2_R2.fastq.gz
+    output: output/Control_2/03_Control_2_R1.fastq.gz, output/Control_2/03_Control_2_R2.fastq.gz
+    log: logs/Control_2_seqpurge.log
+    jobid: 15
+    reason: Missing output files: output/Control_2/03_Control_2_R2.fastq.gz, output/Control_2/03_Control_2_R1.fastq.gz; Input files updated by another job: output/Control_2/02_Control_2_R2.fastq.gz, output/Control_2/01_Control_2_R1.fastq.gz
+    wildcards: sample=Control_2
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:56:13 2024]
+Finished job 5.
+11 of 85 steps (13%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:56:13 2024]
+rule map_data_hisat2:
+    input: output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    output: output/Lys_1/Lys_1.bam
+    log: logs/Lys_1/hisat2.log
+    jobid: 41
+    reason: Input files updated by another job: output/Lys_1/03_Lys_1_R1.fastq.gz, output/Lys_1/03_Lys_1_R2.fastq.gz
+    wildcards: sample=Lys_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:56:23 2024]
+Finished job 52.
+12 of 85 steps (14%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:56:23 2024]
+rule move_left:
+    input: output/Control_1/Control_1.bam
+    output: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    jobid: 4
+    reason: Missing output files: output/Control_1/selectedMoved.bam; Input files updated by another job: output/Control_1/Control_1.bam
+    wildcards: sample=Control_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 12:56:23 2024]
+Finished job 15.
+13 of 85 steps (15%) done
+Removing temporary output output/Control_2/01_Control_2_R1.fastq.gz.
+Removing temporary output output/Control_2/02_Control_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:56:23 2024]
+rule do_fastqc:
+    input: output/Control_2/00_Control_2_R1.fastq.gz, output/Control_2/00_Control_2_R2.fastq.gz, output/Control_2/03_Control_2_R1.fastq.gz, output/Control_2/03_Control_2_R2.fastq.gz
+    output: output/Control_2/00_Control_2_R2_fastqc.html, output/Control_2/03_Control_2_R2_fastqc.html
+    jobid: 65
+    reason: Input files updated by another job: output/Control_2/03_Control_2_R2.fastq.gz, output/Control_2/03_Control_2_R1.fastq.gz
+    wildcards: sample=Control_2
+    threads: 4
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:56:31 2024]
+Finished job 25.
+14 of 85 steps (16%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:56:31 2024]
+rule move1N:
+    input: output/PnG_1/01_PnG_1_R2.fastq.gz
+    output: output/PnG_1/02_PnG_1_R2.fastq.gz
+    jobid: 27
+    reason: Missing output files: output/PnG_1/02_PnG_1_R2.fastq.gz; Input files updated by another job: output/PnG_1/01_PnG_1_R2.fastq.gz
+    wildcards: sample=PnG_1
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:56:32 2024]
+Finished job 34.
+15 of 85 steps (18%) done
+Select jobs to execute...
+[Fri Jan 12 12:56:51 2024]
+Finished job 27.
+16 of 85 steps (19%) done
+Removing temporary output output/PnG_1/01_PnG_1_R2.fastq.gz.
+
+[Fri Jan 12 12:56:51 2024]
+rule seqpurge:
+    input: output/PnG_1/01_PnG_1_R1.fastq.gz, output/PnG_1/02_PnG_1_R2.fastq.gz
+    output: output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    log: logs/PnG_1_seqpurge.log
+    jobid: 24
+    reason: Missing output files: output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz; Input files updated by another job: output/PnG_1/01_PnG_1_R1.fastq.gz, output/PnG_1/02_PnG_1_R2.fastq.gz
+    wildcards: sample=PnG_1
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:57:01 2024]
+Finished job 65.
+17 of 85 steps (20%) done
+Removing temporary output output/Control_2/00_Control_2_R1.fastq.gz.
+Removing temporary output output/Control_2/00_Control_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:57:02 2024]
+rule move1N:
+    input: output/PnG_2/01_PnG_2_R2.fastq.gz
+    output: output/PnG_2/02_PnG_2_R2.fastq.gz
+    jobid: 36
+    reason: Missing output files: output/PnG_2/02_PnG_2_R2.fastq.gz; Input files updated by another job: output/PnG_2/01_PnG_2_R2.fastq.gz
+    wildcards: sample=PnG_2
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:57:21 2024]
+Finished job 41.
+18 of 85 steps (21%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:57:21 2024]
+rule map_data_hisat2:
+    input: output/Control_2/03_Control_2_R1.fastq.gz, output/Control_2/03_Control_2_R2.fastq.gz
+    output: output/Control_2/Control_2.bam
+    log: logs/Control_2/hisat2.log
+    jobid: 14
+    reason: Input files updated by another job: output/Control_2/03_Control_2_R2.fastq.gz, output/Control_2/03_Control_2_R1.fastq.gz
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:57:21 2024]
+Finished job 36.
+19 of 85 steps (22%) done
+Removing temporary output output/PnG_2/01_PnG_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:57:22 2024]
+rule move1N:
+    input: output/Lys_2/01_Lys_2_R2.fastq.gz
+    output: output/Lys_2/02_Lys_2_R2.fastq.gz
+    jobid: 54
+    reason: Missing output files: output/Lys_2/02_Lys_2_R2.fastq.gz; Input files updated by another job: output/Lys_2/01_Lys_2_R2.fastq.gz
+    wildcards: sample=Lys_2
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:57:22 2024]
+Finished job 61.
+20 of 85 steps (24%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:57:22 2024]
+rule move_left:
+    input: output/Lys_1/Lys_1.bam
+    output: output/Lys_1/selectedMoved.bam, output/Lys_1/selectedMoved.bam.bai
+    jobid: 40
+    reason: Missing output files: output/Lys_1/selectedMoved.bam; Input files updated by another job: output/Lys_1/Lys_1.bam
+    wildcards: sample=Lys_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 12:57:25 2024]
+Finished job 24.
+21 of 85 steps (25%) done
+Removing temporary output output/PnG_1/01_PnG_1_R1.fastq.gz.
+Removing temporary output output/PnG_1/02_PnG_1_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:57:25 2024]
+rule do_fastqc:
+    input: output/PnG_1/00_PnG_1_R1.fastq.gz, output/PnG_1/00_PnG_1_R2.fastq.gz, output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    output: output/PnG_1/00_PnG_1_R2_fastqc.html, output/PnG_1/03_PnG_1_R2_fastqc.html
+    jobid: 66
+    reason: Input files updated by another job: output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    wildcards: sample=PnG_1
+    threads: 4
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:57:41 2024]
+Finished job 54.
+22 of 85 steps (26%) done
+Removing temporary output output/Lys_2/01_Lys_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:57:41 2024]
+rule seqpurge:
+    input: output/PnG_2/01_PnG_2_R1.fastq.gz, output/PnG_2/02_PnG_2_R2.fastq.gz
+    output: output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz
+    log: logs/PnG_2_seqpurge.log
+    jobid: 33
+    reason: Missing output files: output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz; Input files updated by another job: output/PnG_2/01_PnG_2_R1.fastq.gz, output/PnG_2/02_PnG_2_R2.fastq.gz
+    wildcards: sample=PnG_2
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:58:08 2024]
+Finished job 66.
+23 of 85 steps (27%) done
+Removing temporary output output/PnG_1/00_PnG_1_R2.fastq.gz.
+Removing temporary output output/PnG_1/00_PnG_1_R1.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:58:08 2024]
+rule seqpurge:
+    input: output/Lys_2/01_Lys_2_R1.fastq.gz, output/Lys_2/02_Lys_2_R2.fastq.gz
+    output: output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    log: logs/Lys_2_seqpurge.log
+    jobid: 51
+    reason: Missing output files: output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz; Input files updated by another job: output/Lys_2/01_Lys_2_R1.fastq.gz, output/Lys_2/02_Lys_2_R2.fastq.gz
+    wildcards: sample=Lys_2
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:58:15 2024]
+Finished job 33.
+24 of 85 steps (28%) done
+Removing temporary output output/PnG_2/01_PnG_2_R1.fastq.gz.
+Removing temporary output output/PnG_2/02_PnG_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:58:15 2024]
+rule do_fastqc:
+    input: output/PnG_2/00_PnG_2_R1.fastq.gz, output/PnG_2/00_PnG_2_R2.fastq.gz, output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz
+    output: output/PnG_2/00_PnG_2_R2_fastqc.html, output/PnG_2/03_PnG_2_R2_fastqc.html
+    jobid: 67
+    reason: Input files updated by another job: output/PnG_2/03_PnG_2_R2.fastq.gz, output/PnG_2/03_PnG_2_R1.fastq.gz
+    wildcards: sample=PnG_2
+    threads: 4
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:58:48 2024]
+Finished job 51.
+25 of 85 steps (29%) done
+Removing temporary output output/Lys_2/01_Lys_2_R1.fastq.gz.
+Removing temporary output output/Lys_2/02_Lys_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:58:49 2024]
+rule do_fastqc:
+    input: output/Lys_2/00_Lys_2_R1.fastq.gz, output/Lys_2/00_Lys_2_R2.fastq.gz, output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    output: output/Lys_2/00_Lys_2_R2_fastqc.html, output/Lys_2/03_Lys_2_R2_fastqc.html
+    jobid: 69
+    reason: Input files updated by another job: output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    wildcards: sample=Lys_2
+    threads: 4
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:58:52 2024]
+Finished job 14.
+26 of 85 steps (31%) done
+Select jobs to execute...
+
+[Fri Jan 12 12:58:52 2024]
+rule map_data_hisat2:
+    input: output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    output: output/PnG_1/PnG_1.bam
+    log: logs/PnG_1/hisat2.log
+    jobid: 23
+    reason: Input files updated by another job: output/PnG_1/03_PnG_1_R1.fastq.gz, output/PnG_1/03_PnG_1_R2.fastq.gz
+    wildcards: sample=PnG_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 12:58:52 2024]
+rule move_left:
+    input: output/Control_2/Control_2.bam
+    output: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    jobid: 13
+    reason: Missing output files: output/Control_2/selectedMoved.bam; Input files updated by another job: output/Control_2/Control_2.bam
+    wildcards: sample=Control_2
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 12:59:00 2024]
+Finished job 67.
+27 of 85 steps (32%) done
+Removing temporary output output/PnG_2/00_PnG_2_R1.fastq.gz.
+Removing temporary output output/PnG_2/00_PnG_2_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 12:59:00 2024]
+rule move1N:
+    input: output/FivePoints_1/01_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/02_FivePoints_1_R2.fastq.gz
+    jobid: 63
+    reason: Missing output files: output/FivePoints_1/02_FivePoints_1_R2.fastq.gz; Input files updated by another job: output/FivePoints_1/01_FivePoints_1_R2.fastq.gz
+    wildcards: sample=FivePoints_1
+    threads: 5
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:59:16 2024]
+Finished job 4.
+28 of 85 steps (33%) done
+Select jobs to execute...
+[Fri Jan 12 12:59:23 2024]
+Finished job 63.
+29 of 85 steps (34%) done
+Removing temporary output output/FivePoints_1/01_FivePoints_1_R2.fastq.gz.
+
+[Fri Jan 12 12:59:23 2024]
+rule seqpurge:
+    input: output/FivePoints_1/01_FivePoints_1_R1.fastq.gz, output/FivePoints_1/02_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    log: logs/FivePoints_1_seqpurge.log
+    jobid: 60
+    reason: Missing output files: output/FivePoints_1/03_FivePoints_1_R2.fastq.gz, output/FivePoints_1/03_FivePoints_1_R1.fastq.gz; Input files updated by another job: output/FivePoints_1/02_FivePoints_1_R2.fastq.gz, output/FivePoints_1/01_FivePoints_1_R1.fastq.gz
+    wildcards: sample=FivePoints_1
+    threads: 6
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 12:59:32 2024]
+Finished job 69.
+30 of 85 steps (35%) done
+Removing temporary output output/Lys_2/00_Lys_2_R2.fastq.gz.
+Removing temporary output output/Lys_2/00_Lys_2_R1.fastq.gz.
+Select jobs to execute...
+[Fri Jan 12 13:00:00 2024]
+Finished job 40.
+31 of 85 steps (36%) done
+[Fri Jan 12 13:00:08 2024]
+Finished job 60.
+32 of 85 steps (38%) done
+Removing temporary output output/FivePoints_1/01_FivePoints_1_R1.fastq.gz.
+Removing temporary output output/FivePoints_1/02_FivePoints_1_R2.fastq.gz.
+
+[Fri Jan 12 13:00:08 2024]
+rule do_fastqc:
+    input: output/FivePoints_1/00_FivePoints_1_R1.fastq.gz, output/FivePoints_1/00_FivePoints_1_R2.fastq.gz, output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/00_FivePoints_1_R2_fastqc.html, output/FivePoints_1/03_FivePoints_1_R2_fastqc.html
+    jobid: 70
+    reason: Input files updated by another job: output/FivePoints_1/03_FivePoints_1_R2.fastq.gz, output/FivePoints_1/03_FivePoints_1_R1.fastq.gz
+    wildcards: sample=FivePoints_1
+    threads: 4
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 13:00:35 2024]
+Finished job 23.
+33 of 85 steps (39%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:00:35 2024]
+rule move_left:
+    input: output/PnG_1/PnG_1.bam
+    output: output/PnG_1/selectedMoved.bam, output/PnG_1/selectedMoved.bam.bai
+    jobid: 22
+    reason: Missing output files: output/PnG_1/selectedMoved.bam; Input files updated by another job: output/PnG_1/PnG_1.bam
+    wildcards: sample=PnG_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Fri Jan 12 13:00:35 2024]
+rule map_data_hisat2:
+    input: output/FivePoints_1/03_FivePoints_1_R1.fastq.gz, output/FivePoints_1/03_FivePoints_1_R2.fastq.gz
+    output: output/FivePoints_1/FivePoints_1.bam
+    log: logs/FivePoints_1/hisat2.log
+    jobid: 59
+    reason: Input files updated by another job: output/FivePoints_1/03_FivePoints_1_R2.fastq.gz, output/FivePoints_1/03_FivePoints_1_R1.fastq.gz
+    wildcards: sample=FivePoints_1
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 13:00:55 2024]
+Finished job 70.
+34 of 85 steps (40%) done
+Removing temporary output output/FivePoints_1/00_FivePoints_1_R1.fastq.gz.
+Removing temporary output output/FivePoints_1/00_FivePoints_1_R2.fastq.gz.
+Select jobs to execute...
+
+[Fri Jan 12 13:00:55 2024]
+rule map_data_hisat2:
+    input: output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    output: output/Lys_2/Lys_2.bam
+    log: logs/Lys_2/hisat2.log
+    jobid: 50
+    reason: Input files updated by another job: output/Lys_2/03_Lys_2_R1.fastq.gz, output/Lys_2/03_Lys_2_R2.fastq.gz
+    wildcards: sample=Lys_2
+    threads: 10
+    resources: tmpdir=/tmp
+
+[Fri Jan 12 13:02:23 2024]
+Finished job 13.
+35 of 85 steps (41%) done
+Select jobs to execute...
+[Fri Jan 12 13:02:29 2024]
+Finished job 50.
+36 of 85 steps (42%) done
+
+[Fri Jan 12 13:02:29 2024]
+rule map_data_hisat2:
+    input: output/PnG_2/03_PnG_2_R1.fastq.gz, output/PnG_2/03_PnG_2_R2.fastq.gz
+    output: output/PnG_2/PnG_2.bam
+    log: logs/PnG_2/hisat2.log
+    jobid: 32
+    reason: Input files updated by another job: output/PnG_2/03_PnG_2_R2.fastq.gz, output/PnG_2/03_PnG_2_R1.fastq.gz
+    wildcards: sample=PnG_2
+    threads: 10
+    resources: tmpdir=/tmp
+
+
+[Fri Jan 12 13:02:29 2024]
+rule move_left:
+    input: output/Lys_2/Lys_2.bam
+    output: output/Lys_2/selectedMoved.bam, output/Lys_2/selectedMoved.bam.bai
+    jobid: 49
+    reason: Missing output files: output/Lys_2/selectedMoved.bam; Input files updated by another job: output/Lys_2/Lys_2.bam
+    wildcards: sample=Lys_2
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:02:46 2024]
+Finished job 59.
+37 of 85 steps (44%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:02:46 2024]
+rule move_left:
+    input: output/FivePoints_1/FivePoints_1.bam
+    output: output/FivePoints_1/selectedMoved.bam, output/FivePoints_1/selectedMoved.bam.bai
+    jobid: 58
+    reason: Missing output files: output/FivePoints_1/selectedMoved.bam; Input files updated by another job: output/FivePoints_1/FivePoints_1.bam
+    wildcards: sample=FivePoints_1
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Fri Jan 12 13:02:46 2024]
+rule dedup_data:
+    input: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    output: output/Control_2/dedup_Control_2.bam
+    log: logs/Control_2/dedup.log
+    jobid: 12
+    reason: Missing output files: output/Control_2/dedup_Control_2.bam; Input files updated by another job: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    wildcards: sample=Control_2
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:04:02 2024]
+Finished job 32.
+38 of 85 steps (45%) done
+Select jobs to execute...
+
+[Fri Jan 12 13:04:02 2024]
+rule move_left:
+    input: output/PnG_2/PnG_2.bam
+    output: output/PnG_2/selectedMoved.bam, output/PnG_2/selectedMoved.bam.bai
+    jobid: 31
+    reason: Missing output files: output/PnG_2/selectedMoved.bam; Input files updated by another job: output/PnG_2/PnG_2.bam
+    wildcards: sample=PnG_2
+    resources: tmpdir=/tmp, mem_gb=50
+
+
+[Fri Jan 12 13:04:02 2024]
+rule dedup_data:
+    input: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    output: output/Control_1/dedup_Control_1.bam
+    log: logs/Control_1/dedup.log
+    jobid: 3
+    reason: Missing output files: output/Control_1/dedup_Control_1.bam; Input files updated by another job: output/Control_1/selectedMoved.bam.bai, output/Control_1/selectedMoved.bam
+    wildcards: sample=Control_1
+    threads: 10
+    resources: tmpdir=/tmp, mem_gb=50
+
+[Fri Jan 12 13:04:56 2024]
+Finished job 22.
+39 of 85 steps (46%) done
+Select jobs to execute...
+[Fri Jan 12 13:06:24 2024]
+Finished job 49.
+40 of 85 steps (47%) done
+[Fri Jan 12 13:07:27 2024]
+Finished job 58.
+41 of 85 steps (48%) done
+[Fri Jan 12 13:07:44 2024]
+Finished job 31.
+42 of 85 steps (49%) done
+[Fri Jan 12 13:11:07 2024]
+Error in rule dedup_data:
+    jobid: 3
+    input: output/Control_1/selectedMoved.bam, output/Control_1/selectedMoved.bam.bai
+    output: output/Control_1/dedup_Control_1.bam
+    log: logs/Control_1/dedup.log (check log file(s) for error details)
+    shell:
+        
+        umi_tools dedup --method=unique -I output/Control_1/selectedMoved.bam --log=logs/Control_1/dedup.log  output/Control_1_header.txt --paired --output-stats=output/Control_1/dedup -S output/Control_1/dedup_Control_1.bam
+
+        --method=
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job dedup_data since they might be corrupted:
+output/Control_1/dedup_Control_1.bam
+[Fri Jan 12 13:11:59 2024]
+Error in rule dedup_data:
+    jobid: 12
+    input: output/Control_2/selectedMoved.bam, output/Control_2/selectedMoved.bam.bai
+    output: output/Control_2/dedup_Control_2.bam
+    log: logs/Control_2/dedup.log (check log file(s) for error details)
+    shell:
+        
+        umi_tools dedup --method=unique -I output/Control_2/selectedMoved.bam --log=logs/Control_2/dedup.log  output/Control_2_header.txt --paired --output-stats=output/Control_2/dedup -S output/Control_2/dedup_Control_2.bam
+
+        --method=
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job dedup_data since they might be corrupted:
+output/Control_2/dedup_Control_2.bam
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: ../../../../../scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/.snakemake/log/2024-01-12T124941.804888.snakemake.log

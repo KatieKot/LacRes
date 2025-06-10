@@ -1,0 +1,58 @@
+```{r}
+library(pacman)
+p_load(data.table, dplyr, ggplot2, bamsignals, yaml, GenomicRanges, Rsamtools, foreach, rtracklayer, seqinr, stringr)
+dir.create(outdatadir, recursive = TRUE)
+```
+
+```{r}
+gr <- readRDS("./output/code/FinalTable/all_sRNA.RDS") 
+mcols(gr)$short_name <- NULL 
+mcols(gr)$sarasas <- NULL 
+
+mcols(gr)$score <- 1
+names(gr) <- mcols(gr)$ID
+export(gr, paste0(outdatadir, "sRNA.bed"))
+cmd <- paste0("bedtools getfasta -fi NC_009004.fasta -fo ", paste0(outdatadir, "sRNAs.fasta"), " -bed ",  paste0(outdatadir, "sRNA.bed"), " -name -s")
+system(cmd)
+
+#cmd <- paste0("RNAfold -i ", paste0(outdatadir, "sRNAs.fasta"), " -o ", paste0(outdatadir), " --noPS" )
+cmd <- paste0("RNAfold -i ", paste0(outdatadir, "sRNAs.fasta"), " -o ", paste0(outdatadir))
+system(cmd)
+cmd <- paste0("mv *.fold ", outdatadir)
+system(cmd)
+
+cmd <- paste0("for i in *.ps; do gs -sDEVICE=jpeg -sOutputFile=$(basename $i ps)jpg - < ${i}; done")
+system(cmd)
+cmd <- paste0("mv *.ps ", outdatadir)
+system(cmd)
+cmd <- paste0("mv *.jpg ", outdatadir)
+system(cmd)
+## Renkam info 
+sekos <- read.fasta(paste0(outdatadir, "sRNAs.fasta"), as.string=TRUE) %>% 
+  unlist() %>% 
+  as.data.table(., keep.rownames=TRUE) %>% 
+  .[, ID :=  strsplit(rn, ":") %>% sapply(., `[`, 1) %>% as.character()] %>% 
+  setnames(., c("rn", "seka", "ID")) %>% 
+  .[, .(ID, seka)] 
+  
+struk_data <- fread(cmd=paste0("cat ", outdatadir, "/*.fold", "| paste - - -"), header=FALSE) %>% 
+  setnames(., c("V1", "seq", "stru")) %>% 
+  .[, ID := strsplit(V1, ":") %>% sapply(., `[`, 1) %>% as.character() %>% gsub(">", "", .)] %>% 
+  .[, structure := strsplit(stru, " ") %>% sapply(., `[`, 1)] %>% 
+  .[, energy := strsplit(stru, " \\(") %>% sapply(., `[`, 2) %>% as.character() %>% gsub("\\(", "", .) %>% gsub("\\)", "", .) %>% gsub(" ", "", .)] %>% 
+  .[, free_3_end := str_extract(structure, "^\\.+") %>% nchar() ] %>% 
+  .[, free_5_end := str_extract(structure, "\\.+$") %>% nchar() ] %>% 
+  .[, .(ID, structure, energy, free_3_end, free_5_end)]
+
+struk_data[is.na(struk_data)] <- 0
+
+dt <- gr %>% 
+  as.data.table() %>% 
+  .[, .(start, end, strand, ID)] %>% 
+  merge(., struk_data, by="ID") %>% 
+  merge(., sekos, by="ID") %>% 
+  .[, .(ID, strand, start, end, seka, structure, energy, free_3_end, free_5_end)]
+
+saveRDS(dt, paste0(outdatadir, "ViennaStructures.RDS"))
+```
+
