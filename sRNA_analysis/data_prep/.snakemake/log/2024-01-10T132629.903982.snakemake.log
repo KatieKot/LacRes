@@ -1,3 +1,0 @@
-CreateRuleException in file /scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/Snakefile, line 238:
-The name noHils_reads_93 is already used by another rule
-  File "/scratch/kotryna/Giedrius/2016_sRNALactis/data_prep/Snakefile", line 238, in <module>
